@@ -31,9 +31,9 @@ export default function InterviewScheduleDialog({ isOpen, onClose }: InterviewSc
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] bg-gray-900 border border-gray-700 text-white">
-        <DialogHeader className="bg-gray-800/50 -mx-6 -mt-6 px-6 py-4 rounded-t-xl">
-          <DialogTitle className="text-purple-400 flex items-center gap-2">
+      <DialogContent className="sm:max-w-[425px] bg-white border border-gray-200 text-gray-800">
+        <DialogHeader className="bg-purple-50 -mx-6 -mt-6 px-6 py-4 rounded-t-xl">
+          <DialogTitle className="text-purple-700 flex items-center gap-2">
             <Clock className="h-5 w-5" />
             Today's Interview Schedule
           </DialogTitle>
@@ -42,13 +42,13 @@ export default function InterviewScheduleDialog({ isOpen, onClose }: InterviewSc
           {interviews.map((interview, index) => (
             <div 
               key={index} 
-              className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-800 to-gray-800/50 rounded-lg border border-gray-700 hover:shadow-sm hover:border-purple-800/50 transition-all"
+              className="flex justify-between items-center p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 hover:shadow-sm hover:border-purple-200 transition-all"
             >
               <div>
-                <p className="font-medium text-purple-300">{interview.name}</p>
-                <p className="text-sm text-gray-400">{interview.role}</p>
+                <p className="font-medium text-gray-800">{interview.name}</p>
+                <p className="text-sm text-gray-500">{interview.role}</p>
               </div>
-              <div className="bg-gray-950 px-3 py-1 rounded-full text-sm font-medium text-purple-300 border border-purple-700/30 flex items-center">
+              <div className="bg-purple-50 px-3 py-1 rounded-full text-sm font-medium text-purple-700 border border-purple-100 flex items-center">
                 {format(interview.time, "hh:mm a")}
               </div>
             </div>

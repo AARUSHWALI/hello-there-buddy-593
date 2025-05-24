@@ -6,7 +6,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ResumeUpload from "@/components/resume/ResumeUpload";
 import ResumeForm from "@/components/resume/ResumeForm";
 import { ResumeData } from "@/types/resume";
-import { useToast } from "@/hooks/use-toast";
 
 export default function Resume() {
   const [activeTab, setActiveTab] = useState("upload");
@@ -14,7 +13,6 @@ export default function Resume() {
   const [isLoading, setIsLoading] = useState(false);
   const [parsedFile, setParsedFile] = useState<File | null>(null);
   const [jsonData, setJsonData] = useState<string>("");
-  const { toast } = useToast();
 
   const handleResumeUploaded = (data: ResumeData, file: File) => {
     setResumeData(data);
@@ -23,11 +21,6 @@ export default function Resume() {
     
     // Convert the parsed data to a formatted JSON string
     setJsonData(JSON.stringify(data, null, 2));
-
-    toast({
-      title: "Resume data ready",
-      description: "You can now review and edit the parsed information"
-    });
   };
 
   const handleParsing = (loading: boolean) => {

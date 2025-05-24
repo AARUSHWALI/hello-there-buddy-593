@@ -1,6 +1,6 @@
 
 import React from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 interface PersonalityScores {
   extroversion: number;
@@ -24,7 +24,7 @@ export default function PersonalityPieChart({ scores }: PersonalityPieChartProps
   ];
 
   return (
-    <div className="w-full h-72">
+    <div className="w-full h-full">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie
@@ -32,16 +32,22 @@ export default function PersonalityPieChart({ scores }: PersonalityPieChartProps
             cx="50%"
             cy="50%"
             labelLine={false}
-            outerRadius={80}
+            outerRadius={120}
+            innerRadius={60}
             fill="#8884d8"
             dataKey="value"
+            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+            paddingAngle={2}
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+              <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={2} />
             ))}
           </Pie>
-          <Tooltip formatter={(value) => `${value}%`} contentStyle={{ borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} />
-          <Legend formatter={(value) => `${value}%`} />
+          <Tooltip 
+            formatter={(value) => `${value}%`} 
+            contentStyle={{ borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
+            itemStyle={{ color: "#333" }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>

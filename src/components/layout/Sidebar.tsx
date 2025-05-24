@@ -1,4 +1,3 @@
-
 import { Link, useLocation } from "react-router-dom";
 import { 
   LayoutDashboard, 
@@ -10,12 +9,13 @@ import {
   Activity,
   PieChart
 } from "lucide-react";
-import { useState } from "react";
+import { useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 export default function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const { state, toggleSidebar } = useSidebar();
+  const isCollapsed = state === "collapsed";
   
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -61,27 +61,34 @@ export default function Sidebar() {
   
   return (
     <div className={cn(
-      "bg-white border-r border-gray-200 h-screen flex flex-col",
+      "bg-white border-r border-gray-200 h-screen flex flex-col relative",
       isCollapsed ? "w-20" : "w-56"
     )}>
+      {/* Static Logo Section with adjusted padding for collapse button */}
       <div className={cn(
-        "p-4 border-b border-gray-200 flex items-center",
-        isCollapsed ? "justify-center" : "justify-between"
+        "p-4 border-b border-gray-200 relative",
+        isCollapsed ? "pr-10" : "pr-4" // Add right padding when collapsed
       )}>
-        {isCollapsed ? (
-          <div className="text-xs font-bold text-purple-800">people.ai</div>
-        ) : (
-          <div className="text-2xl font-bold text-purple-800">people.ai</div>
-        )}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)} 
-          className="p-1 rounded-md hover:bg-gray-100"
-        >
-          <Menu size={20} />
-        </button>
+        <div className="text-2xl font-bold text-purple-800 whitespace-nowrap">
+          {isCollapsed ? "p.ai" : "people.ai"}
+        </div>
       </div>
       
-      <div className="flex flex-col flex-1 overflow-y-auto">
+      {/* Collapse Button - Positioned properly with adjusted right spacing */}
+      <button 
+        onClick={toggleSidebar} 
+        className={cn(
+          "absolute p-1 rounded-md hover:bg-gray-100 z-10",
+          isCollapsed ? "top-4 right-4" : "top-4 right-4" // Same position in both states
+        )}
+        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        <Menu size={20} />
+      </button>
+      
+      {/* Collapsible Content Section */}
+      <div className="flex flex-col flex-1 overflow-y-auto pt-2">
+        {/* ... rest of your sidebar content ... */}
         <div className="px-3 py-4">
           {!isCollapsed && (
             <h2 className="mb-2 px-4 text-xs font-semibold text-gray-500 uppercase">
@@ -142,6 +149,7 @@ export default function Sidebar() {
         </div>
       </div>
       
+      {/* Static Version Section - Not part of collapse */}
       <div className="p-4 border-t border-gray-200 text-center text-xs text-gray-500">
         v0.1.0
       </div>

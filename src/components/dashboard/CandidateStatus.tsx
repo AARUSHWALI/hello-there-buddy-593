@@ -13,10 +13,27 @@ export default function CandidateStatus({
   reviewCount = 30,
   rejectedCount = 25,
 }: CandidateStatusProps) {
+  const total = approvedCount + reviewCount + rejectedCount;
+  
   const data = [
-    { name: "Approved", value: approvedCount, color: "#9b87f5" },
-    { name: "Under Review", value: reviewCount, color: "#4da3ff" },
-    { name: "Rejected", value: rejectedCount, color: "#ff6b6b" },
+    { 
+      name: "Approved", 
+      value: approvedCount, 
+      percentage: Math.round((approvedCount / total) * 100),
+      color: "#9b87f5" 
+    },
+    { 
+      name: "Under Review", 
+      value: reviewCount, 
+      percentage: Math.round((reviewCount / total) * 100),
+      color: "#4da3ff" 
+    },
+    { 
+      name: "Rejected", 
+      value: rejectedCount, 
+      percentage: Math.round((rejectedCount / total) * 100),
+      color: "#ff6b6b" 
+    },
   ];
   
   const RADIAN = Math.PI / 180;
@@ -27,24 +44,25 @@ export default function CandidateStatus({
     innerRadius,
     outerRadius,
     percent,
+    index,
   }: any) => {
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-    return percent > 0.15 ? (
+    return (
       <text
         x={x}
         y={y}
-        fill="#fff"
-        textAnchor={x > cx ? "start" : "end"}
+        fill="#ffffff"
+        textAnchor="middle"
         dominantBaseline="central"
-        fontSize={12}
+        fontSize={14}
         fontWeight="bold"
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
-    ) : null;
+    );
   };
 
   return (
@@ -76,7 +94,9 @@ export default function CandidateStatus({
                 ))}
               </Pie>
               <Tooltip 
-                formatter={(value: number) => [`${value}`, 'Count']}
+                formatter={(value: number, name: string, props: any) => {
+                  return [`${value} (${props.payload.percentage}%)`, name];
+                }}
                 contentStyle={{ borderRadius: '8px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }}
               />
               <Legend verticalAlign="bottom" align="center" />
@@ -85,25 +105,11 @@ export default function CandidateStatus({
         </div>
 
         <div className="flex flex-wrap justify-center gap-6 mt-4">
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-500">{approvedCount}</div>
-            <div className="text-gray-600">Approved</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-500">{reviewCount}</div>
-            <div className="text-gray-600">Under Review</div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-red-500">{rejectedCount}</div>
-            <div className="text-gray-600">Rejected</div>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-4 mt-6 justify-center">
           {data.map((item) => (
-            <div key={item.name} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }}></div>
-              <span className="text-sm text-gray-700 font-medium">{item.name}</span>
+            <div key={item.name} className="text-center">
+              <div className="text-3xl font-bold" style={{ color: item.color }}>{item.value}</div>
+              <div className="text-gray-600">{item.name}</div>
+              <div className="text-sm text-gray-500">{item.percentage}%</div>
             </div>
           ))}
         </div>

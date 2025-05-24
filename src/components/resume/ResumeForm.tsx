@@ -216,8 +216,6 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
     setSubmitting(true);
     
     try {
-      // In a real application, you would send the data to your backend here
-      // Here we're just sending the JSON data
       console.log("Submitting JSON data:", jsonData);
       await new Promise(resolve => setTimeout(resolve, 1500));
       
