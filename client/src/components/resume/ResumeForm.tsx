@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FileText, Trash, Plus, Save, Code } from "lucide-react";
+import { FileText, Trash, Plus, Save, Code, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,6 +12,7 @@ import { ResumeData, Education, Experience } from "@/types/resume";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { saveResume } from "@/services/resumeService";
 
 interface ResumeFormProps {
   resumeData: ResumeData;
@@ -26,6 +27,9 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
   const [showJsonDialog, setShowJsonDialog] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   
   const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -216,19 +220,44 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
     setSubmitting(true);
     
     try {
-      console.log("Submitting JSON data:", jsonData);
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Save the resume data to the backend
+      const { success, data, error } = await saveResume(resumeData, parsedFile || undefined);
       
+      if (!success || !data) {
+        throw new Error(error || 'Failed to save resume data');
+      }
+
+      // Update the resume data with the response
+      const updatedData = {
+        ...resumeData,
+        id: data.id,
+        ...(data.file_url && {
+          file_url: data.file_url,
+          file_path: data.file_path,
+          original_filename: data.original_filename,
+          file_size: data.file_size,
+          mime_type: data.mime_type
+        })
+      };
+      
+      // Update the state with the new data
+      setResumeData(updatedData);
+      setJsonData(JSON.stringify(updatedData, null, 2));
+      
+      // Update the URL to include the resume ID for easy sharing
+      window.history.pushState({}, '', `/resume/${data.id}`);
+      
+      // Show success toast
       toast({
-        title: "Candidate data saved",
-        description: "The resume information has been successfully saved.",
+        title: "✅ Candidate data saved",
+        description: "The resume information has been successfully saved to the database.",
       });
     } catch (error) {
       console.error("Error saving resume data:", error);
       toast({
         variant: "destructive",
-        title: "Failed to save data",
-        description: "There was an error saving the resume information.",
+        title: "❌ Failed to save data",
+        description: error instanceof Error ? error.message : "There was an error saving the resume information.",
       });
     } finally {
       setSubmitting(false);
@@ -243,6 +272,43 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
     });
   };
   
+  const handleSave = async () => {
+    if (!resumeData) return;
+    
+    try {
+      setIsSaving(true);
+      setSaveError(null);
+      
+      // Call the saveResume function from resumeService
+      const response = await saveResume(resumeData, parsedFile || undefined);
+      
+      if (response.success) {
+        setSaveSuccess(true);
+        // Hide success message after 3 seconds
+        setTimeout(() => setSaveSuccess(false), 3000);
+        
+        toast({
+          title: "Success",
+          description: "Resume saved successfully!",
+          variant: "default",
+        });
+      } else {
+        throw new Error(response.error || 'Failed to save resume');
+      }
+    } catch (error) {
+      console.error('Error saving resume:', error);
+      setSaveError(error instanceof Error ? error.message : 'Failed to save resume');
+      
+      toast({
+        title: "Error",
+        description: "Failed to save resume. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       {/* File Information */}
@@ -863,6 +929,8 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="researchPapers" className="text-sm font-medium">Research Papers (comma separated)</Label>
+                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.researchPapersCount}</span>
+
                   <Input 
                     id="researchPapers" 
                     value={resumeData.researchPapers?.join(', ') || ''} 
@@ -873,6 +941,8 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 
                 <div className="space-y-2">
                   <Label htmlFor="patents" className="text-sm font-medium">Patents (comma separated)</Label>
+                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.patentsCount}</span>
+
                   <Input 
                     id="patents" 
                     value={resumeData.patents?.join(', ') || ''} 
@@ -883,6 +953,7 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 
                 <div className="space-y-2">
                   <Label htmlFor="books" className="text-sm font-medium">Books (comma separated)</Label>
+                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.booksCount}</span>
                   <Input 
                     id="books" 
                     value={resumeData.books?.join(', ') || ''} 
@@ -917,11 +988,24 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
               Cancel
             </Button>
             <Button 
-              type="submit"
+              type="button"
+              onClick={handleSave}
               className="bg-purple-600 hover:bg-purple-700 text-white"
-              disabled={submitting}
+              disabled={isSaving}
             >
-              {submitting ? "Saving..." : <><Save className="w-4 h-4 mr-2" /> Save Candidate Data</>}
+              {isSaving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" /> Save Resume
+                </>
+              )}
             </Button>
           </div>
         </div>

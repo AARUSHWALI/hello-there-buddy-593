@@ -157,13 +157,16 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
         - Trainings: array of strings
         - Workshops_No: number
         - Workshops: array of strings
+        - Research_Papers_No: number
         - Research_Papers: array of strings
+        - Patents_No: number
         - Patents: array of strings
+        - Books_No: number
         - Books: array of strings
         - State_JK: number (0 for no, 1 for yes - for J&K resident)
         - Projects_No: number
         - Projects: array of strings
-        - Best_Fit_For: string (suggest a Computer Science job role suitable for the candidate)
+        - Best_Fit_For: string (suggest a job role suitable for the candidate)
         
         For locations, check if it mentions Jammu, Kashmir, or J&K and set State_JK to 1 if it does.
         
@@ -258,8 +261,11 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
             trainings: parsedResumeData.Trainings || [],
             workshopsCount: parsedResumeData.Workshops_No || 0,
             workshops: parsedResumeData.Workshops || [],
+            researchPapersCount: parsedResumeData.Research_Papers_No || 0,
             researchPapers: parsedResumeData.Research_Papers || [],
+            patentsCount: parsedResumeData.Patents_No || 0,
             patents: parsedResumeData.Patents || [],
+            booksCount: parsedResumeData.Books_No || 0,
             books: parsedResumeData.Books || [],
             isJK: parsedResumeData.State_JK || 0,
             projectsCount: parsedResumeData.Projects_No || 0,

@@ -22,9 +22,12 @@ export interface ResumeData {
   trainings: string[];
   workshopsCount: number;
   workshops: string[];
-  researchPapers?: string[];
-  patents?: string[];
-  books?: string[];
+  researchPapers: string[];
+  researchPapersCount: number;
+  patents: string[];
+  patentsCount: number;
+  books: string[];
+  booksCount: number;
   isJK: number; // 0 for no, 1 for yes (J&K)
   projectsCount: number;
   projects: string[];
