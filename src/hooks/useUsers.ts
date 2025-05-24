@@ -29,10 +29,7 @@ export function useUsers() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Instead of using Supabase queries which are causing TypeScript errors,
-      // we'll use mock data for now. In a real application, you would fix the
-      // Supabase table and types to match your schema.
-      
+      // Using mock data - replace with your actual API calls
       const mockUsers: UserProfile[] = [
         {
           id: "1",

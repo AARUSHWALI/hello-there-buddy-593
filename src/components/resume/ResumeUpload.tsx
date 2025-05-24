@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ResumeData } from "@/types/resume";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ResumeUploadProps {
   onResumeUploaded: (data: ResumeData, file: File) => void;
@@ -18,9 +16,6 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-  // Note: In production, this key should be stored securely on your backend
-  const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -280,62 +275,23 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
             }
           }
 
-          // Store resume data in Supabase
-          const { data: resumeData, error: insertError } = await supabase
-            .from('candidate_resume')
-            .insert({
-              ug_institute_name: mappedData.ugInstitute,
-              pg_institute_name: mappedData.pgInstitute,
-              phd_institute: mappedData.phdInstitute,
-              best_fit_for: mappedData.bestFitFor,
-              skills: mappedData.skills.join(', '),
-              skills_no: mappedData.skillsCount,
-              achievements: mappedData.achievements.join(', '),
-              achievements_no: mappedData.achievementsCount,
-              projects: mappedData.projects.join(', '),
-              projects_no: mappedData.projectsCount,
-              longevity_years: mappedData.longevityYears,
-              number_of_jobs: mappedData.numberOfJobs,
-              experience_average: mappedData.averageExperience,
-              trainings: mappedData.trainingsCount,
-              workshops: mappedData.workshopsCount,
-              state_jk: mappedData.isJK === 1,
-              total_papers: mappedData.researchPapers?.length || 0,
-              total_patents: mappedData.patents?.length || 0,
-              books: mappedData.books?.length || 0,
-              email: mappedData.personalInfo.email,
-              education: JSON.stringify(mappedData.education),
-              experience: JSON.stringify(mappedData.experience),
-              personal_info: JSON.stringify(mappedData.personalInfo)
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error("Error inserting data:", insertError);
-            throw insertError;
-          }
-
-          // Try to send personality test invitation using the extracted email
-          if (mappedData.personalInfo.email) {
-            try {
-              const { error: inviteError } = await supabase.functions.invoke('send-personality-test-invite', {
-                body: {
-                  resumeId: resumeData.id,
-                  email: mappedData.personalInfo.email,
-                  name: mappedData.personalInfo.name,
-                  personalityTestUrl: `${window.location.origin}/personality-test`
-                }
-              });
-
-              if (inviteError) {
-                console.error("Error sending invitation:", inviteError);
-                // Don't throw here, we want to continue even if email fails
-              }
-            } catch (emailError) {
-              console.error("Failed to send email:", emailError);
-              // Continue processing even if email sending fails
-            }
+          // Store resume data in your preferred storage
+          const resumeData = {
+            user_id: 'your_user_id',
+            file_name: file.name,
+            file_type: file.type,
+            file_size: file.size,
+            parsed_data: mappedData,
+            status: 'processed',
+            created_at: new Date().toISOString(),
+          };
+          
+          console.log('Resume data processed:', resumeData);
+          
+          // Handle personality test invite if email is available
+          if (mappedData.personalInfo?.email) {
+            console.log('Would send personality test invite to:', mappedData.personalInfo.email);
+            // Implement your own invitation logic here
           }
 
           // Clear progress interval and set to 100%
@@ -344,10 +300,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           
           // Notify user and return data
           setTimeout(() => {
-            toast({
-              title: "Resume Processed Successfully",
-              description: "The resume has been parsed and stored successfully.",
-            });
+            // Implement your own toast notification here
             onResumeUploaded(mappedData, file);
             setUploading(false);
             onParsingStateChange(false);
@@ -416,22 +369,27 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
         return;
       }
       
-      const { data, error } = await supabase
-        .from('candidate_resume')
-        .select('id')
-        .eq('email', candidateEmail)
-        .single();
-
-      if (error) throw error;
-
-      await supabase.functions.invoke('send-personality-test-invite', {
-        body: {
-          resumeId: data.id,
-          email: candidateEmail,
-          name: parsedResumeData.personalInfo.name,
-          personalityTestUrl: `${window.location.origin}/personality-test`
+      // Fetch resume data from your preferred storage
+      // Replace this with your own data fetching logic
+      console.log('Would fetch resume data for user:', 'your_user_id');
+      
+      // Mock data for demonstration
+      const data = {
+        parsed_data: {
+          personalInfo: {
+            email: 'user@example.com',
+            name: 'User Name'
+          }
         }
-      });
+      };
+      
+      if (!data?.parsed_data) {
+        throw new Error('No resume data found');
+      }
+      
+      // Handle personality test invite
+      console.log('Would send personality test invite to:', data.parsed_data.personalInfo?.email);
+      // Implement your own invitation logic here
     } catch (error) {
       console.error('Failed to send personality test invite:', error);
     }

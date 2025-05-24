@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+// Import your own storage/API client here
 import { useToast } from '@/components/ui/use-toast';
 import { toast as sonnerToast } from 'sonner';
 
@@ -62,16 +62,11 @@ export function usePersonalityTest() {
         results.fitmentScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
       }
 
-      // Submit results to the edge function
-      const { error } = await supabase.functions.invoke('send-personality-test-invite', {
-        body: {
-          testResults: results
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
+      // Replace this with your own submission logic
+      console.log('Would submit test results:', results);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Show success message
       toast({
@@ -122,19 +117,11 @@ export function usePersonalityTest() {
         throw new Error("No valid email provided");
       }
       
-      // Send invitation via edge function
-      const { data, error } = await supabase.functions.invoke('send-personality-test-invite', {
-        body: {
-          email: candidateEmail,
-          emailText,
-          name,
-          personalityTestUrl
-        }
-      });
-
-      if (error) {
-        throw error;
-      }
+      // Replace this with your own invitation logic
+      console.log('Would send personality test invite to:', candidateEmail, 'with name:', name);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Show success message
       toast({
