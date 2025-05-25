@@ -33,6 +33,9 @@ export default function InterviewScheduleDialog({
   isLoading 
 }: InterviewScheduleDialogProps) {
 
+  // Ensure interviews is always an array
+  const safeInterviews = Array.isArray(interviews) ? interviews : [];
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px] bg-white border border-gray-200 text-gray-800">
@@ -47,8 +50,8 @@ export default function InterviewScheduleDialog({
             <div className="flex justify-center items-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
             </div>
-          ) : interviews.length > 0 ? (
-            interviews.map((interview) => (
+          ) : safeInterviews.length > 0 ? (
+            safeInterviews.map((interview) => (
               <div 
                 key={interview.id}
                 className="flex justify-between items-start p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 hover:shadow-sm hover:border-purple-200 transition-all"

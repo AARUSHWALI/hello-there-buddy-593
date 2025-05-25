@@ -1,92 +1,60 @@
 # Resume Parser API
 
-A Node.js API for parsing and storing resume information in a Supabase database.
+A Node.js API for parsing and managing resumes and interviews, built with Express and Supabase.
 
 ## Features
 
-- Store and retrieve resume data
-- Structured data storage for personal info, education, experience, skills, achievements, and projects
-- Metadata tracking for analytics and matching
-- File upload support (PDF, DOC, DOCX)
-- RESTful API endpoints
-- Automatic database schema initialization
+- Upload and parse resumes
+- Store and manage resume data
+- Schedule and manage interviews
+- Search and filter resumes
+- File storage with Supabase Storage
 
 ## Prerequisites
 
 - Node.js (v14 or higher)
 - npm or yarn
-- A Supabase project (get one at [supabase.com](https://supabase.com/))
+- Supabase account
 
-## Getting Started
+## Setup
 
-### Environment Setup
-
-1. Copy the example environment file:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. Update the `.env` file with your Supabase credentials:
-   - `SUPABASE_URL`: Your Supabase project URL
-   - `SUPABASE_KEY`: Your Supabase anon/public key
-   - `SUPABASE_SERVICE_KEY`: Your Supabase service role key (required for database initialization)
-
-### Database Initialization
-
-The server will automatically initialize the database schema when it starts. This includes:
-
-1. Creating the `resumes` table with all required columns
-2. Setting up indexes for better query performance
-3. Creating a trigger for the `updated_at` timestamp
-
-If you need to manually initialize the database, you can run:
-
-```bash
-node db-init.js
-```
-
-For direct database access (optional), you can set the `DATABASE_URL` environment variable:
-```
-DATABASE_URL=postgresql://postgres:your_password@db.your-supabase-project.supabase.co:5432/postgres
-```
-
-### Running the Server
-
-1. Install dependencies:
+1. Clone the repository
+2. Install dependencies:
    ```bash
    npm install
-   # or
-   yarn
    ```
-
-2. Start the server:
+3. Copy `.env.example` to `.env` and update with your Supabase credentials
+4. Start the development server:
    ```bash
-   npm start
-   # or
-   yarn start
+   npm run dev
    ```
 
-3. The server will be available at `http://localhost:5000`
+## Environment Variables
 
-### Development
+Create a `.env` file in the root directory with the following variables:
 
-For development with auto-reload:
-
-```bash
-npm run dev
-# or
-yarn dev
+```
+PORT=5000
+NODE_ENV=development
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_KEY=your_supabase_service_key
+MAX_FILE_SIZE=10485760
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5000
 ```
 
 ## API Endpoints
 
-### Store Resume Data (with optional file upload)
+### Resumes
 
-**POST** `/api/resume`
+- `GET /api/resumes` - Get all resumes (paginated)
+- `GET /api/resumes/search?query=search_term` - Search resumes
+- `GET /api/resumes/:id` - Get a specific resume
+- `POST /api/resumes` - Create a new resume (with file upload)
+- `PUT /api/resumes/:id` - Update a resume
+- `DELETE /api/resumes/:id` - Delete a resume
 
-You can either:
-1. Send a JSON body with resume data
-2. Upload a file with form-data (field name: `resumeFile`) along with the resume data
+### Interviews
 
 #### Example with file upload (using form-data):
 ```bash

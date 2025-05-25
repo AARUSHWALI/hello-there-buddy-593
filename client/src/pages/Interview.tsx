@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, PlusCircle, Clock, Loader2 } from "lucide-react";
@@ -6,11 +5,88 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, isToday, isSameDay, parseISO } from "date-fns";
+import { format, isSameDay, parseISO, isToday } from "date-fns";
 import axios from "axios";
 import InterviewScheduleDialog from "@/components/dashboard/InterviewScheduleDialog";
+
+// Simple TimePicker component
+const TimePicker = ({ date, setDate }: { date: Date; setDate: (date: Date) => void }) => {
+  const [hours, setHours] = useState(date.getHours());
+  const [minutes, setMinutes] = useState(date.getMinutes());
+  const [period, setPeriod] = useState(date.getHours() >= 12 ? 'PM' : 'AM');
+
+  const updateTime = (h: number, m: number, p: string) => {
+    let newHours = h;
+    if (p === 'PM' && h < 12) newHours = h + 12;
+    if (p === 'AM' && h === 12) newHours = 0;
+    
+    const newDate = new Date(date);
+    newDate.setHours(newHours, m, 0, 0);
+    setDate(newDate);
+  };
+
+  return (
+    <div className="flex items-center space-x-2">
+      <Select
+        value={hours > 12 ? (hours - 12).toString() : (hours === 0 ? '12' : hours.toString())}
+        onValueChange={(value) => {
+          const newHours = parseInt(value);
+          setHours(newHours);
+          updateTime(newHours, minutes, period);
+        }}
+      >
+        <SelectTrigger className="w-20">
+          <SelectValue placeholder="Hour" />
+        </SelectTrigger>
+        <SelectContent>
+          {Array.from({ length: 12 }, (_, i) => (i + 1).toString().padStart(2, '0')).map((hour) => (
+            <SelectItem key={hour} value={hour}>
+              {hour}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <span>:</span>
+      <Select
+        value={minutes.toString().padStart(2, '0')}
+        onValueChange={(value) => {
+          const newMinutes = parseInt(value);
+          setMinutes(newMinutes);
+          updateTime(hours, newMinutes, period);
+        }}
+      >
+        <SelectTrigger className="w-20">
+          <SelectValue placeholder="Min" />
+        </SelectTrigger>
+        <SelectContent>
+          {['00', '15', '30', '45'].map((minute) => (
+            <SelectItem key={minute} value={minute}>
+              {minute}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={period}
+        onValueChange={(value) => {
+          setPeriod(value);
+          updateTime(hours, minutes, value);
+        }}
+      >
+        <SelectTrigger className="w-20">
+          <SelectValue placeholder="AM/PM" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="AM">AM</SelectItem>
+          <SelectItem value="PM">PM</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
 
 interface Interview {
   id: string;
@@ -19,8 +95,20 @@ interface Interview {
   candidateId: string;
   candidateName: string;
   candidateEmail: string;
+  interviewerId: string;
+  interviewerName: string;
+  interviewerEmail: string;
   date: string;
   status: 'scheduled' | 'completed' | 'cancelled';
+  meetingLink?: string;
+  meetingPlatform: string;
+  interviewType: string;
+  jobTitle?: string;
+  jobDescription?: string;
+  interviewerNotes?: string;
+  candidateFeedback?: string;
+  technicalAssessment?: string;
+  overallRating?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -35,6 +123,7 @@ interface Candidate {
 const API_BASE_URL = 'http://localhost:5000/api';
 
 export default function Interview() {
+  const { toast } = useToast();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -42,11 +131,28 @@ export default function Interview() {
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [newEvent, setNewEvent] = useState({
+  const [newEvent, setNewEvent] = useState<{
+    title: string;
+    description: string;
+    candidateId: string;
+    date: Date;
+    interviewType: string;
+    meetingPlatform: string;
+    meetingLink: string;
+    interviewerId: string;
+    interviewerName: string;
+    interviewerEmail: string;
+  }>({
     title: '',
     description: '',
     candidateId: '',
-    date: new Date()
+    date: new Date(),
+    interviewType: 'technical',
+    meetingPlatform: 'Zoom',
+    meetingLink: '',
+    interviewerId: '',
+    interviewerName: '',
+    interviewerEmail: ''
   });
 
   // Fetch interviews and candidates
@@ -122,10 +228,23 @@ export default function Interview() {
   }, []);
 
   const handleCreateEvent = async () => {
+    // Get the selected candidate
+    const selectedCandidate = candidates.find(c => c.id === newEvent.candidateId);
+    
+    if (!selectedCandidate) {
+      toast({
+        title: "Error",
+        description: "Please select a valid candidate",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Validate all required fields
     if (!newEvent.title || !newEvent.description || !newEvent.candidateId) {
       toast({
-        title: "Missing Fields",
-        description: "Please fill in all fields to schedule an interview",
+        title: "Missing Required Fields",
+        description: "Please fill in all required fields to schedule an interview",
         variant: "destructive"
       });
       return;
@@ -133,13 +252,31 @@ export default function Interview() {
 
     try {
       setIsCreating(true);
-      const response = await axios.post(`${API_BASE_URL}/interviews`, {
+      const interviewData = {
         title: newEvent.title,
         description: newEvent.description,
         candidateId: newEvent.candidateId,
+        candidateName: selectedCandidate.name,
+        candidateEmail: selectedCandidate.email,
         date: newEvent.date.toISOString(),
-        status: 'scheduled'
-      });
+        status: 'scheduled',
+        interviewerId: newEvent.interviewerId,
+        interviewerName: newEvent.interviewerName,
+        interviewerEmail: newEvent.interviewerEmail,
+        meetingLink: newEvent.meetingLink,
+        meetingPlatform: newEvent.meetingPlatform,
+        interviewType: newEvent.interviewType,
+        jobTitle: '',
+        jobDescription: '',
+        interviewerNotes: '',
+        candidateFeedback: '',
+        technicalAssessment: '',
+        overallRating: 0
+      };
+
+      console.log('Submitting interview data:', interviewData);
+      
+      const response = await axios.post(`${API_BASE_URL}/interviews`, interviewData);
 
       if (response.data?.success) {
         setInterviews([...interviews, response.data.data]);
@@ -148,7 +285,18 @@ export default function Interview() {
           description: `Interview scheduled successfully for ${format(newEvent.date, 'PPP')}`
         });
         setShowEventDialog(false);
-        setNewEvent({ title: '', description: '', candidateId: '', date: new Date() });
+        setNewEvent({
+          title: '',
+          description: '',
+          candidateId: '',
+          date: new Date(),
+          interviewType: 'technical',
+          meetingPlatform: 'Zoom',
+          meetingLink: '',
+          interviewerId: '',
+          interviewerName: '',
+          interviewerEmail: ''
+        });
       }
     } catch (error) {
       console.error('Error creating interview:', error);
@@ -294,22 +442,110 @@ export default function Interview() {
           </DialogHeader>
           
           <div className="space-y-4 py-4">
-            <div>
-              <Input
-                placeholder="Interview Title"
-                value={newEvent.title}
-                onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
-                className="border-purple-200 focus-visible:ring-purple-500"
-              />
-            </div>
-            
-            <div>
-              <Textarea
-                placeholder="Interview Details"
-                value={newEvent.description}
-                onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
-                className="min-h-[100px] border-purple-200 focus-visible:ring-purple-500"
-              />
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Interview Title *</label>
+                <Input
+                  placeholder="E.g., Technical Interview - Frontend"
+                  value={newEvent.title}
+                  onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
+                  className="border-purple-200 focus-visible:ring-purple-500"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">Interview Description *</label>
+                <Textarea
+                  placeholder="Enter interview details, topics to cover, etc."
+                  value={newEvent.description}
+                  onChange={(e) => setNewEvent({ ...newEvent, description: e.target.value })}
+                  className="min-h-[100px] border-purple-200 focus-visible:ring-purple-500"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Date & Time *</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start text-left font-normal ${!newEvent.date ? 'text-muted-foreground' : ''}`}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newEvent.date ? format(newEvent.date, "PPPp") : <span>Pick a date and time</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={newEvent.date}
+                        onSelect={(date) => date && setNewEvent({...newEvent, date})}
+                        initialFocus
+                      />
+                      <div className="p-3 border-t">
+                        <TimePicker 
+                          date={newEvent.date} 
+                          setDate={(date) => setNewEvent({...newEvent, date})} 
+                        />
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Interview Type *</label>
+                  <Select
+                    value={newEvent.interviewType || 'technical'}
+                    onValueChange={(value) => setNewEvent({...newEvent, interviewType: value})}
+                  >
+                    <SelectTrigger className="w-full border-purple-200 focus:ring-purple-500">
+                      <SelectValue placeholder="Select interview type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="technical">Technical</SelectItem>
+                      <SelectItem value="hr">HR</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="culture">Culture Fit</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Meeting Platform *</label>
+                  <Select
+                    value={newEvent.meetingPlatform || 'Zoom'}
+                    onValueChange={(value) => setNewEvent({...newEvent, meetingPlatform: value})}
+                  >
+                    <SelectTrigger className="w-full border-purple-200 focus:ring-purple-500">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Zoom">Zoom</SelectItem>
+                      <SelectItem value="Google Meet">Google Meet</SelectItem>
+                      <SelectItem value="Microsoft Teams">Microsoft Teams</SelectItem>
+                      <SelectItem value="In-Person">In-Person</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">Meeting Link (if online)</label>
+                  <Input
+                    placeholder="https://meet.example.com/your-meeting"
+                    value={newEvent.meetingLink || ''}
+                    onChange={(e) => setNewEvent({ ...newEvent, meetingLink: e.target.value })}
+                    className="border-purple-200 focus-visible:ring-purple-500"
+                  />
+                </div>
+              </div>
             </div>
             
             <div>
