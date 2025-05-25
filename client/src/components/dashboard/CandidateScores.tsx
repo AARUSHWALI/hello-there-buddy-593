@@ -8,15 +8,7 @@ import CandidateDetailsDialog from "./CandidateDetailsDialog";
 interface Candidate {
   name: string;
   email: string;
-  fitmentScore: number;
-  phone: string;
-  education: string;
-  experience: string;
-  skills: string[];
-  projects: string[];
-  expectedRole: string;
-  location: string;
-  longevityScore: number;
+  fitment_score: number;
 }
 
 interface CandidateScoresProps {
@@ -25,27 +17,9 @@ interface CandidateScoresProps {
 
 export default function CandidateScores({ candidates }: CandidateScoresProps) {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
-  const navigate = useNavigate();
   
-  // Function to find the user ID by name (matching with users in the Users page)
-  const getUserIdByName = (name: string): string => {
-    // This is a simple mapping function - in a real app, you'd fetch this from an API
-    const userMap: Record<string, string> = {
-      "Saksham Gupta": "1",
-      "Ayush Thakur": "2",
-      "Adishwar Sharma": "3",
-      "Garima Saigal": "4",
-      "Aarush Wali": "4" // Mapping to existing user ID
-    };
-    
-    return userMap[name] || "1"; // Default to user ID "1" if not found
-  };
-
   const handleCandidateClick = (candidate: Candidate) => {
-    // Get the user ID for this candidate
-    const userId = getUserIdByName(candidate.name);
-    // Navigate to the Users page with the user ID
-    navigate(`/users?selected=${userId}`);
+    setSelectedCandidate(candidate);
   };
 
   return (
@@ -76,31 +50,31 @@ export default function CandidateScores({ candidates }: CandidateScoresProps) {
               </div>
               <div
                 className={`text-lg font-semibold ${
-                  candidate.fitmentScore >= 60
+                  candidate.fitment_score >= 60
                     ? "text-green-600"
                     : "text-yellow-600"
                 }`}
               >
-                {candidate.fitmentScore.toFixed(1)}%
+                {candidate.fitment_score.toFixed(1)}%
               </div>
             </div>
 
             {/* Green Bar under candidates with score greater than 60% */}
-            {candidate.fitmentScore >= 60 && (
+            {candidate.fitment_score >= 60 && (
               <div className="mt-2 w-full bg-green-100 rounded-full h-2.5">
                 <div
                   className="h-2.5 rounded-full bg-green-500"
-                  style={{ width: `${candidate.fitmentScore}%` }}
+                  style={{ width: `${candidate.fitment_score}%` }}
                 ></div>
               </div>
             )}
 
             {/* Yellow Bar under candidates with score less than 60% */}
-            {candidate.fitmentScore < 60 && (
+            {candidate.fitment_score < 60 && (
               <div className="mt-2 w-full bg-yellow-100 rounded-full h-2.5">
                 <div
                   className="h-2.5 rounded-full bg-yellow-500"
-                  style={{ width: `${candidate.fitmentScore}%` }}
+                  style={{ width: `${candidate.fitment_score}%` }}
                 ></div>
               </div>
             )}

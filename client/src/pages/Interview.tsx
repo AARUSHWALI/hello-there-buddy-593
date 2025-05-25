@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, PlusCircle, Clock, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -130,7 +130,10 @@ export default function Interview() {
   const [isCreating, setIsCreating] = useState(false);
   const [showEventDialog, setShowEventDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
+  const [showInterviewDetails, setShowInterviewDetails] = useState(false);
+  const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [newEvent, setNewEvent] = useState<{
     title: string;
     description: string;
@@ -187,12 +190,41 @@ export default function Interview() {
         // Then fetch interviews
         try {
           const interviewsRes = await axios.get(`${API_BASE_URL}/interviews`);
-          console.log('Interviews API Response:', interviewsRes.data);
+          console.log('Interviews API Response:', interviewsRes);
           
           if (interviewsRes.data?.data) {
-            setInterviews(Array.isArray(interviewsRes.data.data) 
+            const interviewsData = Array.isArray(interviewsRes.data.data) 
               ? interviewsRes.data.data 
-              : [interviewsRes.data.data]);
+              : [interviewsRes.data.data];
+            
+            // Transform the interview data to match our interface
+            const formattedInterviews = interviewsData.map((interview: any) => ({
+              id: interview.id || '',
+              title: interview.title || 'Untitled Interview',
+              description: interview.description || '',
+              candidateId: interview.candidate_id || interview.candidateId || '',
+              candidateName: interview.candidate_name || interview.candidateName || 'Unknown Candidate',
+              candidateEmail: interview.candidate_email || interview.candidateEmail || '',
+              interviewerId: interview.interviewer_id || interview.interviewerId || '',
+              interviewerName: interview.interviewer_name || interview.interviewerName || '',
+              interviewerEmail: interview.interviewer_email || interview.interviewerEmail || '',
+              date: interview.date || new Date().toISOString(),
+              status: interview.status || 'scheduled',
+              meetingLink: interview.meeting_link || interview.meetingLink || '',
+              meetingPlatform: interview.meeting_platform || interview.meetingPlatform || '',
+              interviewType: interview.interview_type || interview.interviewType || '',
+              jobTitle: interview.job_title || interview.jobTitle || '',
+              jobDescription: interview.job_description || interview.jobDescription || '',
+              interviewerNotes: interview.interviewer_notes || interview.interviewerNotes || '',
+              candidateFeedback: interview.candidate_feedback || interview.candidateFeedback || '',
+              technicalAssessment: interview.technical_assessment || interview.technicalAssessment || '',
+              overallRating: interview.overall_rating || interview.overallRating || 0,
+              createdAt: interview.created_at || interview.createdAt || new Date().toISOString(),
+              updatedAt: interview.updated_at || interview.updatedAt || new Date().toISOString()
+            }));
+            
+            console.log('Formatted interviews:', formattedInterviews);
+            setInterviews(formattedInterviews);
           }
         } catch (interviewError) {
           console.error('Error fetching interviews:', interviewError);
@@ -231,7 +263,7 @@ export default function Interview() {
     // Get the selected candidate
     const selectedCandidate = candidates.find(c => c.id === newEvent.candidateId);
     
-    if (!selectedCandidate) {
+    if (!selectedCandidate || !newEvent.candidateId) {
       toast({
         title: "Error",
         description: "Please select a valid candidate",
@@ -241,7 +273,7 @@ export default function Interview() {
     }
 
     // Validate all required fields
-    if (!newEvent.title || !newEvent.description || !newEvent.candidateId) {
+    if (!newEvent.title || !newEvent.description) {
       toast({
         title: "Missing Required Fields",
         description: "Please fill in all required fields to schedule an interview",
@@ -260,10 +292,10 @@ export default function Interview() {
         candidateEmail: selectedCandidate.email,
         date: newEvent.date.toISOString(),
         status: 'scheduled',
-        interviewerId: newEvent.interviewerId,
-        interviewerName: newEvent.interviewerName,
-        interviewerEmail: newEvent.interviewerEmail,
-        meetingLink: newEvent.meetingLink,
+        interviewerId: newEvent.interviewerId || null,
+        interviewerName: newEvent.interviewerName || null,
+        interviewerEmail: newEvent.interviewerEmail || null,
+        meetingLink: newEvent.meetingLink || null,
         meetingPlatform: newEvent.meetingPlatform,
         interviewType: newEvent.interviewType,
         jobTitle: '',
@@ -310,130 +342,358 @@ export default function Interview() {
     }
   };
 
+  // Function to get interviews for a specific date
   const getInterviewsForDate = (date: Date) => {
-    return interviews.filter(interview => 
-      isSameDay(parseISO(interview.date), date)
-    );
+    if (!interviews || interviews.length === 0) return [];
+    
+    return interviews.filter(interview => {
+      try {
+        if (!interview || !interview.date) return false;
+        const interviewDate = new Date(interview.date);
+        return isSameDay(interviewDate, date);
+      } catch (error) {
+        console.error('Error processing interview date:', error, interview);
+        return false;
+      }
+    });
   };
+  
+  // Get unique interview dates for calendar highlighting
+  const interviewDates = useMemo<Date[]>(() => {
+    if (!interviews || interviews.length === 0) return [];
+    
+    const dates = interviews
+      .map(interview => {
+        try {
+          return interview?.date ? new Date(interview.date) : null;
+        } catch (error) {
+          console.error('Error parsing interview date:', error);
+          return null;
+        }
+      })
+      .filter((date): date is Date => date !== null);
+    
+    // Remove duplicates and return
+    return Array.from(new Set(dates.map(date => date.toDateString())))
+      .map(dateStr => new Date(dateStr));
+  }, [interviews]);
 
+  // Get interviews for the selected date and future dates
+  const upcomingInterviews = interviews
+    .filter(interview => {
+      try {
+        return interview && interview.date && new Date(interview.date) >= new Date();
+      } catch (error) {
+        console.error('Error filtering upcoming interviews:', error, interview);
+        return false;
+      }
+    })
+    .sort((a, b) => {
+      try {
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      } catch (error) {
+        console.error('Error sorting interviews:', error);
+        return 0;
+      }
+    });
+
+  // Get interviews for today and selected date
   const todayInterviews = getInterviewsForDate(new Date());
   const selectedDateInterviews = getInterviewsForDate(selectedDate);
+
+  // Handle interview click to show details
+  const handleInterviewClick = (interview: Interview) => {
+    setSelectedInterview(interview);
+    setShowInterviewDetails(true);
+  };
 
   return (
     <div className="page-container bg-gradient-to-br from-purple-50/80 to-white p-6">
       <h1 className="text-2xl font-bold text-purple-800 mb-6">Interview Calendar</h1>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column - Calendar */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-purple-100">
-            <div className="p-4 border-b border-purple-100 bg-purple-50 flex justify-between items-center">
-              <h2 className="text-lg font-medium text-purple-700">Select Date</h2>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline"
-                  size="sm"
-                  className="border-purple-200 text-purple-700 hover:bg-purple-50"
-                  onClick={() => setShowScheduleDialog(true)}
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Today's Schedule
-                </Button>
-                <Button 
-                  onClick={() => setShowEventDialog(true)}
-                  size="sm"
-                  className="bg-purple-600 hover:bg-purple-700"
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  New Event
-                </Button>
+        {/* Calendar View */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <h3 className="font-medium text-lg mb-4 text-gray-800">Calendar View</h3>
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => date && setSelectedDate(date)}
+              month={calendarMonth}
+              onMonthChange={setCalendarMonth}
+              className="w-full"
+              disabled={{ before: new Date() }}
+              modifiers={{
+                hasInterviews: interviewDates
+              }}
+              modifiersStyles={{
+                hasInterviews: {
+                  border: '2px solid #8b5cf6',
+                  borderRadius: '50%'
+                }
+              }}
+            />
+          </div>
+
+          {/* Upcoming Interviews */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+            <h3 className="font-medium text-lg mb-4 text-gray-800">Upcoming Interviews</h3>
+            {upcomingInterviews.length > 0 ? (
+              <div className="space-y-3">
+                {upcomingInterviews.map((interview) => (
+                  <div 
+                    key={interview.id}
+                    onClick={() => handleInterviewClick(interview)}
+                    className="p-4 bg-white rounded-lg border border-gray-200 hover:border-purple-300 cursor-pointer transition-colors"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium text-gray-900">{interview.title}</h4>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            interview.status === 'scheduled' 
+                              ? 'bg-blue-100 text-blue-800'  
+                              : interview.status === 'completed'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
+                          </span>
+                        </div>
+                        
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-start">
+                            <Clock className="h-4 w-4 text-gray-400 mt-0.5 mr-2 flex-shrink-0" />
+                            <p className="text-sm text-gray-600">
+                              {format(new Date(interview.date), 'EEEE, MMMM d, yyyy • h:mm a')}
+                            </p>
+                          </div>
+                          
+                          <div className="flex items-start">
+                            <svg className="h-4 w-4 text-gray-400 mt-0.5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">Candidate:</span> {interview.candidateName}
+                              {interview.candidateEmail && ` (${interview.candidateEmail})`}
+                            </p>
+                          </div>
+                          
+                          {interview.interviewerName && (
+                            <div className="flex items-start">
+                              <svg className="h-4 w-4 text-gray-400 mt-0.5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                              </svg>
+                              <p className="text-sm text-gray-600">
+                                <span className="font-medium">Interviewer:</span> {interview.interviewerName}
+                                {interview.interviewerEmail && ` (${interview.interviewerEmail})`}
+                              </p>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-start">
+                            <svg className="h-4 w-4 text-gray-400 mt-0.5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            <div className="flex flex-wrap gap-2">
+                              {interview.interviewType && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                  {interview.interviewType}
+                                </span>
+                              )}
+                              {interview.meetingPlatform && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                  {interview.meetingPlatform}
+                                </span>
+                              )}
+                              {interview.meetingLink && (
+                                <a 
+                                  href={interview.meetingLink} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 hover:bg-green-200"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  Join Meeting
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-            
-            <div className="p-6">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => date && setSelectedDate(date)}
-                className="rounded-md border border-purple-100 w-full"
-                classNames={{
-                  day_selected: "bg-purple-600 text-white hover:bg-purple-600",
-                  day_today: "bg-purple-100 text-purple-900",
-                }}
-              />
-            </div>
+            ) : (
+              <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+                <p className="text-sm text-gray-500">
+                  No upcoming interviews scheduled.
+                </p>
+              </div>
+            )}
           </div>
         </div>
         
-        {/* Right column - Event details */}
-        <div>
-          <div className="bg-white rounded-xl shadow-md overflow-hidden border border-purple-100 h-full">
-            <div className="p-4 border-b border-purple-100 bg-purple-50">
-              <h2 className="text-lg font-medium text-purple-700">Selected Date</h2>
-            </div>
-            <div className="p-6">
-              <div className="text-center mb-4">
-                <p className="text-xl font-semibold text-purple-800">{format(selectedDate, 'PPPP')}</p>
+        {/* Selected Date's Interviews */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm sticky top-4">
+            <h3 className="font-medium text-lg mb-4 text-gray-800">
+              {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+            </h3>
+            
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
               </div>
-              
-              {isLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h3 className="font-medium text-purple-800">Scheduled Interviews</h3>
-                  
-                  {selectedDateInterviews.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedDateInterviews.map((interview) => (
-                        <div key={interview.id} className="p-3 bg-purple-50 rounded-lg border border-purple-100">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h4 className="font-medium text-purple-900">{interview.title}</h4>
-                              <p className="text-sm text-purple-700">{interview.candidateName}</p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                {format(parseISO(interview.date), 'h:mm a')}
-                              </p>
-                            </div>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              interview.status === 'scheduled' 
-                                ? 'bg-blue-100 text-blue-800' 
-                                : interview.status === 'completed'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-center">
-                      <p className="text-sm text-gray-500">
-                        No interviews scheduled for {isToday(selectedDate) ? 'today' : 'this date'}.
-                      </p>
-                    </div>
-                  )}
-                  
-                  <Button 
-                    onClick={() => {
-                      setNewEvent(prev => ({ ...prev, date: selectedDate }));
-                      setShowEventDialog(true);
-                    }}
-                    className="w-full bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 mt-4"
+            ) : selectedDateInterviews.length > 0 ? (
+              <div className="space-y-3">
+                {selectedDateInterviews.map((interview) => (
+                  <div 
+                    key={interview.id}
+                    onClick={() => handleInterviewClick(interview)}
+                    className="p-3 bg-purple-50 rounded-lg border border-purple-100 hover:border-purple-300 cursor-pointer transition-colors"
                   >
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    Schedule Interview
-                  </Button>
-                </div>
-              )}
-            </div>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium text-purple-900">{interview.title}</h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {format(new Date(interview.date), 'h:mm a')} • {interview.candidateName}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        interview.status === 'scheduled' 
+                          ? 'bg-blue-100 text-blue-800'  
+                          : interview.status === 'completed'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {interview.status.charAt(0).toUpperCase() + interview.status.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100 text-center">
+                <p className="text-sm text-gray-500">
+                  No interviews scheduled for {isToday(selectedDate) ? 'today' : 'this date'}.
+                </p>
+              </div>
+            )}
+            
+            <Button 
+              onClick={() => {
+                setNewEvent(prev => ({ ...prev, date: selectedDate }));
+                setShowEventDialog(true);
+              }}
+              className="w-full bg-gradient-to-r from-purple-500 to-purple-700 hover:from-purple-600 hover:to-purple-800 mt-4"
+            >
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Schedule Interview
+            </Button>
           </div>
         </div>
       </div>
-      
+
+      {/* Interview Details Dialog */}
+      <Dialog open={showInterviewDetails} onOpenChange={setShowInterviewDetails}>
+        <DialogContent className="sm:max-w-[500px]">
+          {selectedInterview && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-xl">{selectedInterview.title}</DialogTitle>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                  <CalendarIcon className="h-4 w-4" />
+                  <span>{format(new Date(selectedInterview.date), 'EEEE, MMMM d, yyyy • h:mm a')}</span>
+                </div>
+              </DialogHeader>
+              
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium">Candidate</h4>
+                  <div className="p-3 bg-gray-50 rounded-md">
+                    <p className="font-medium">{selectedInterview.candidateName}</p>
+                    <p className="text-sm text-gray-600">{selectedInterview.candidateEmail}</p>
+                  </div>
+                </div>
+
+                {selectedInterview.interviewerName && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Interviewer</h4>
+                    <div className="p-3 bg-gray-50 rounded-md">
+                      <p className="font-medium">{selectedInterview.interviewerName}</p>
+                      <p className="text-sm text-gray-600">{selectedInterview.interviewerEmail}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <h4 className="font-medium">Details</h4>
+                  <div className="p-3 bg-gray-50 rounded-md space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Type:</span>
+                      <span className="font-medium">
+                        {selectedInterview.interviewType || 'Not specified'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-500">Platform:</span>
+                      <span className="font-medium">
+                        {selectedInterview.meetingPlatform || 'Not specified'}
+                      </span>
+                    </div>
+                    {selectedInterview.meetingLink && (
+                      <div className="flex justify-between">
+                        <span className="text-sm text-gray-500">Meeting Link:</span>
+                        <a 
+                          href={selectedInterview.meetingLink} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-purple-600 hover:underline text-sm"
+                        >
+                          Join Meeting
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {selectedInterview.description && (
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Description</h4>
+                    <div className="p-3 bg-gray-50 rounded-md">
+                      <p className="text-sm text-gray-700 whitespace-pre-line">
+                        {selectedInterview.description}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowInterviewDetails(false)}
+                  >
+                    Close
+                  </Button>
+                  <Button 
+                    variant="default"
+                    onClick={() => {
+                      // Add edit functionality here
+                      setShowInterviewDetails(false);
+                    }}
+                  >
+                    Edit Interview
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Event creation dialog */}
       <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
         <DialogContent className="bg-white border border-purple-100 sm:max-w-md">

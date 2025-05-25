@@ -1,13 +1,17 @@
-
-import { useState } from "react";
-import { Briefcase, Calendar, Users, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Briefcase, Calendar, Users, FileText, Loader2, AlertCircle } from "lucide-react";
+import axios from "axios";
+import { format } from "date-fns";
+import { toast } from "sonner";
 import StatCard from "@/components/dashboard/StatCard";
-import VacancyStats from "@/components/dashboard/VacancyStats";
 import JobFitmentTable from "@/components/dashboard/JobFitmentTable";
 import CandidateScores from "@/components/dashboard/CandidateScores";
 import InterviewScheduleDialog from "@/components/dashboard/InterviewScheduleDialog";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import CandidateStatus from "@/components/dashboard/CandidateStatus";
+import { DashboardStats, Candidate, Interview } from "@/types/dashboard";
+
+const API_BASE_URL = 'http://localhost:5000/api';
 
 const vacancyData = [
   { name: "Jan", value: 12 },
@@ -41,20 +45,20 @@ const candidates = [
   { 
     name: "Ayush Thakur", 
     email: "ayushthakur1412@gmail.com", 
-    fitmentScore: 69.94,
+    fitment_score: 69.94,
     phone: "+91 9876543211",
     education: "Master of Computer Science",
     experience: "6+ Years",
     skills: ["Web Development", "JavaScript", "Node.js"],
     projects: ["E-Commerce Platform", "Hospital Management System"],
-    expectedRole: "Professor",
+    expected_role: "Professor",
     location: "Delhi",
-    longevityScore: 78
+    longevity_score: 78
   },
   { 
     name: "Adishwar Sharma", 
     email: "2021a1045@mietjammu.in", 
-    fitmentScore: 72.58,
+    fitment_score: 72.58,
     phone: "+91 9876543212",
     education: "Ph.D. in AI",
     experience: "4+ Years",
@@ -146,12 +150,211 @@ const mockEmployeeData = [
 
 export default function Dashboard() {
   const [showInterviews, setShowInterviews] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    totalApplications: 0,
+    hiredCandidates: 0,
+    pendingResumes: 0,
+    todayInterviews: 0
+  });
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [interviews, setInterviews] = useState<Interview[]>([]);
+  const [jobRoles, setJobRoles] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+
+        // Fetch all data in parallel with error handling for each request
+        const [resumesRes, interviewsRes, jobsRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/resumes`, {
+            params: {
+              limit: 100, // Get more resumes to have enough data for the dashboard
+              sort_by: 'created_at',
+              sort_order: 'desc'
+            }
+          }).catch(err => {
+            console.error('Error fetching resumes:', err);
+            return { data: { data: [], pagination: { total: 0 } } };
+          }),
+          axios.get(`${API_BASE_URL}/interviews`, {
+            params: {
+              start_date: new Date().toISOString().split('T')[0],
+              end_date: new Date().toISOString().split('T')[0],
+              limit: 10,
+              sort_by: 'date',
+              sort_order: 'asc'
+            }
+          }).catch(err => {
+            console.error('Error fetching interviews:', err);
+            return { data: { data: [] } };
+          }),
+          axios.get(`${API_BASE_URL}/jobs`, {
+            params: {
+              limit: 50,
+              fields: 'title,department,required_skills',
+              status: 'active'
+            }
+          }).catch(err => {
+            console.error('Error fetching jobs:', err);
+            return { data: { data: [] } };
+          })
+        ]);
+
+        // Get resumes data with error handling
+        const resumesData = resumesRes.data?.data || [];
+        const totalApplications = resumesRes.data?.pagination?.total || 0;
+        const todayInterviews = interviewsRes.data?.data?.length || 0;
+        const jobsData = jobsRes.data?.data || [];
+        
+        // Calculate statistics
+        const hiredCandidates = resumesData.filter(
+          (r: any) => r.status === 'hired' || r.status === 'accepted'
+        ).length;
+
+        const pendingResumes = resumesData.filter(
+          (r: any) => !r.status || ['pending', 'review', 'new'].includes(r.status)
+        ).length;
+
+        // Update stats
+        setStats({
+          totalApplications,
+          hiredCandidates,
+          pendingResumes,
+          todayInterviews
+        });
+
+        // Process candidates for the CandidateScores component
+        const formattedCandidates = resumesData.map((resume: any) => {
+          // Use fitment_score from API if available, otherwise use 0
+          // The API should calculate this on the backend based on resume analysis
+          const fitmentScore = typeof resume.fitment_score === 'number' 
+            ? Math.min(100, Math.max(0, resume.fitment_score))
+            : 0; // Default to 0 if not provided by API
+          
+          return {
+            id: resume.id || '',
+            name: resume.name || resume.candidate_name || 'Unknown Candidate',
+            email: resume.email || resume.candidate_email || '',
+            fitment_score: fitmentScore,
+            phone: resume.phone || '',
+            education: resume.education || '',
+            experience: resume.experience ? `${resume.experience} years` : 'Not specified',
+            skills: Array.isArray(resume.skills) ? resume.skills : [],
+            projects: Array.isArray(resume.projects) ? resume.projects : [],
+            expectedRole: resume.expected_role || resume.best_fit_for || 'Not specified',
+            location: resume.location || 'Location not specified',
+            longevity_score: resume.longevity_years || 0,
+            status: resume.status || 'pending'
+          };
+        });
+        
+        setCandidates(formattedCandidates);
+        
+        // Process job roles from jobs data
+        const jobRoles = Array.from(new Set(
+          jobsData
+            .map((job: any) => job.title || job.role || job.department)
+            .filter(Boolean)
+        )).slice(0, 10); // Limit to 10 roles max
+        
+        // If no job roles from jobs, try to get from resumes
+        if (jobRoles.length === 0) {
+          const resumeJobRoles = Array.from(new Set(
+            resumesData
+              .map((r: any) => r.expected_role || r.best_fit_for)
+              .filter(Boolean)
+          )).slice(0, 10);
+          
+          setJobRoles(resumeJobRoles as string[]);
+        } else {
+          setJobRoles(jobRoles as string[]);
+        }
+        
+        // Process interviews for the interview dialog
+        const interviewsData = interviewsRes.data?.data || [];
+        const formattedInterviews = interviewsData.map((i: any) => ({
+          id: i.id || '',
+          title: i.title || 'Interview',
+          candidateName: i.candidate_name || 'Unknown',
+          candidateEmail: i.candidate_email || '',
+          date: i.date || new Date().toISOString(),
+          status: i.status || 'scheduled',
+          interviewType: i.interview_type || '',
+          meetingPlatform: i.meeting_platform || '',
+          description: i.description || ''
+        }));
+        
+        setInterviews(formattedInterviews);
+
+        // Process interviews
+        if (interviewsRes.data?.data) {
+          const interviewsData = Array.isArray(interviewsRes.data.data) 
+            ? interviewsRes.data.data 
+            : [interviewsRes.data.data];
+          
+          const formattedInterviews = interviewsData.map((i: any) => ({
+            id: i.id || '',
+            title: i.title || 'Interview',
+            candidateName: i.candidate_name || 'Unknown',
+            candidateEmail: i.candidate_email || '',
+            date: i.date || new Date().toISOString(),
+            status: i.status || 'scheduled',
+            interviewType: i.interview_type || '',
+            meetingPlatform: i.meeting_platform || '',
+            description: i.description || ''
+          }));
+          
+          setInterviews(formattedInterviews);
+        }
+
+        // Set default job roles (can be updated later if needed)
+        setJobRoles([
+          'Software Engineer',
+          'Product Manager',
+          'UX Designer',
+          'Data Scientist',
+          'DevOps Engineer'
+        ]);
+
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError('Failed to load dashboard data. Please try again later.');
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="page-container flex items-center justify-center">
+        <Loader2 className="h-12 w-12 animate-spin text-purple-600" />
+      </div>
+    );
+  }
+
+
+  if (error) {
+    return (
+      <div className="page-container flex flex-col items-center justify-center text-red-600">
+        <AlertCircle className="h-12 w-12 mb-4" />
+        <p className="text-lg">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container bg-white text-gray-800">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard 
-          value="7"
+          value={stats.totalApplications.toString()}
           title="Job Applications"
           icon={<Users size={40} className="text-white" />}
           color="purple"
@@ -159,17 +362,15 @@ export default function Dashboard() {
         />
         
         <StatCard 
-          value="4"
+          value={stats.hiredCandidates.toString()}
           title="Hired Candidates"
           icon={<Briefcase size={40} className="text-white" />}
           color="blue"
           className="relative overflow-hidden shadow-md"
-        >
-          {/* <VacancyStats data={vacancyData} /> */}
-        </StatCard>
+        />
         
         <StatCard 
-          value="7"
+          value={stats.pendingResumes.toString()}
           title="Resumes for Review"
           icon={<FileText size={40} className="text-white" />}
           color="green"
@@ -177,7 +378,7 @@ export default function Dashboard() {
         />
         
         <StatCard 
-          value="5"
+          value={stats.todayInterviews.toString()}
           title="Scheduled Interviews For Today"
           icon={<Calendar size={40} className="text-blue" />}
           color="rose"
@@ -190,8 +391,12 @@ export default function Dashboard() {
         <div className="bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 h-full">
           <JobFitmentTable 
             jobRoles={jobRoles}
-            fitCategories={fitCategories}
-            employees={mockEmployeeData}
+            fitCategories={['Best Fit', 'Mid Fit', 'Not Fit']}
+            employees={candidates.map(c => ({
+              name: c.name,
+              role: c.expectedRole || 'N/A',
+              fitment: c.fitment_score >= 70 ? 'Best Fit' : c.fitment_score >= 40 ? 'Mid Fit' : 'Not Fit'
+            }))}
           />
         </div>
 
@@ -206,8 +411,10 @@ export default function Dashboard() {
       </div>
 
       <InterviewScheduleDialog 
-        isOpen={showInterviews}
+        isOpen={showInterviews} 
         onClose={() => setShowInterviews(false)}
+        interviews={interviews}
+        isLoading={loading}
       />
     </div>
   );

@@ -45,7 +45,7 @@ export default function JobFitmentTable({ jobRoles, fitCategories, employees }: 
     <div className="bg-white rounded-lg p-6 shadow-2xl h-full flex flex-col">
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-2xl font-extrabold text-indigo-600">Job Fitment</h3>
+          <h3 className="text-xl font-semibold text-indigo-600">Job Fitment</h3>
           {filteredEmployees.length > 7 && (
             <Button variant="ghost" size="sm" onClick={() => setShowAll(!showAll)} className="flex items-center gap-2">
               {showAll ? "Show Less" : "View All"}
@@ -53,7 +53,7 @@ export default function JobFitmentTable({ jobRoles, fitCategories, employees }: 
             </Button>
           )}
         </div>
-        <div className="flex flex-col space-y-4">
+        <div className="flex flex-col space-y-3">
           <Select value={selectedRole} onValueChange={setSelectedRole}>
             <SelectTrigger className="w-full border-2 border-indigo-600 rounded-lg focus:ring-indigo-500">
               <SelectValue placeholder="Select Role" className="font-semibold text-gray-700" />
@@ -84,21 +84,21 @@ export default function JobFitmentTable({ jobRoles, fitCategories, employees }: 
         </div>
       </div>
 
-      <div className="overflow-x-auto mt-6 flex-grow">
+      <div className="overflow-x-auto mt-4 flex-grow">
         <table className="min-w-full border-separate border-spacing-0 rounded-lg shadow-lg">
           <thead>
             <tr className="bg-indigo-500 text-white">
-              <th className="py-3 px-6 text-left text-lg font-semibold rounded-tl-lg">Name</th>
-              <th className="py-3 px-6 text-left text-lg font-semibold">Role</th>
-              <th className="py-3 px-6 text-left text-lg font-semibold rounded-tr-lg">Fitment</th>
+              <th className="py-2 px-4 text-left text-sm font-semibold rounded-tl-lg">Name</th>
+              <th className="py-2 px-4 text-left text-sm font-semibold">Role</th>
+              <th className="py-2 px-4 text-left text-sm font-semibold rounded-tr-lg">Fitment</th>
             </tr>
           </thead>
           <tbody className="bg-white">
             {displayedEmployees.map((employee, index) => (
               <tr key={index} className="hover:bg-indigo-100 transition-colors">
-                <td className="py-3 px-6 border-t border-gray-100 text-lg font-semibold text-gray-800">{employee.name}</td>
-                <td className="py-3 px-6 border-t border-gray-100 text-lg font-semibold text-gray-800">{employee.role}</td>
-                <td className="py-3 px-6 border-t border-gray-100 text-lg font-semibold">
+                <td className="py-2 px-4 border-t border-gray-100 text-sm font-medium text-gray-800">{employee.name}</td>
+                <td className="py-2 px-4 border-t border-gray-100 text-sm font-medium text-gray-600">{employee.role}</td>
+                <td className="py-2 px-4 border-t border-gray-100 text-sm font-medium">
                   <span className={`inline-flex items-center px-4 py-1 rounded-full text-sm font-medium ${
                     employee.fitment === "Best Fit" ? "bg-green-500 text-white" :
                     employee.fitment === "Mid Fit" ? "bg-yellow-500 text-white" :
