@@ -1,11 +1,11 @@
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
-import type { UserProfile } from "@/hooks/useUsers";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import type { UserProfile } from "@/pages/Users";
 import PersonalityPieChart from "./PersonalityPieChart";
 import FitmentScoreGauge from "./FitmentScoreGauge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from "date-fns";
 
 interface UserDetailsDialogProps {
   isOpen: boolean;

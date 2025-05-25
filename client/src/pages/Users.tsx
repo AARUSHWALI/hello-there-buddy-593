@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useLocation } from "react-router-dom";
 import UserDetailsDialog from "@/components/users/UserDetailsDialog";
-import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import axios from "axios";
+import { toast } from "@/components/ui/use-toast";
 
-interface UserProfile {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;
@@ -15,6 +16,7 @@ interface UserProfile {
   experience?: string;
   education?: string;
   about?: string;
+  profileImage?: string;
   personalityScores?: {
     extroversion: number;
     agreeableness: number;
@@ -22,173 +24,70 @@ interface UserProfile {
     neuroticism: number;
     conscientiousness: number;
   };
-  profileImage?: string;
+  phone?: string;
+  address?: string;
+  summary?: string;
+  best_fit_for?: string;
+  created_at?: string;
+  fitment_score?: number;
+  skills?: string[];
 }
 
-const users: UserProfile[] = [
-  {
-    id: "1",
-    name: "Saksham Gupta",
-    email: "2022a6041@mietjammu.in",
-    score: 75.89,
-    jobRole: "Assistant Professor",
-    experience: "3+ Years",
-    education: "Ph.D. in Computer Science",
-    about: "Experienced educator with a focus on AI and machine learning",
-    profileImage: "/images/SakshamGupta.png", // Add image path here
-    personalityScores: {
-      extroversion: 76,
-      agreeableness: 84,
-      openness: 69,
-      neuroticism: 50,
-      conscientiousness: 90
+const API_BASE_URL = 'http://localhost:5000/api';
+
+const mapResumeToUserProfile = (resume: any): UserProfile => {
+  // Format education if it's an array
+  const formatEducation = (edu: any[] | string | undefined): string => {
+    if (!edu) return '';
+    if (typeof edu === 'string') return edu;
+    if (Array.isArray(edu) && edu.length > 0) {
+      // Get the highest degree
+      const highestDegree = edu[0];
+      return `${highestDegree.degree} in ${highestDegree.field || ''} from ${highestDegree.institution || ''}`.trim();
     }
-  },
-  {
-    id: "2",
-    name: "Ayush Thakur",
-    email: "ayushthakur1412@gmail.com",
-    score: 69.94,
-    jobRole: "Professor",
-    experience: "6+ Years",
-    education: "Master of Computer Science",
-    about: "Self-experienced Front End Developer with a strong background in software and web development",
-    profileImage: "/images/ayush-profile.jpg", // Add image path here
+    return '';
+  };
+
+  // in experience display this feild ${longevity_years} years
+  const formatExperience = (exp: any[] | string | undefined): string => {
+    if (!exp) return 'No experience';
+    if (typeof exp === 'string') return exp;
+    return `${exp} years`;
+  };
+
+  // Format skills if it's an array
+  const formatSkills = (skills: any[] | undefined): string[] => {
+    if (!skills) return [];
+    if (Array.isArray(skills)) return skills;
+    return [];
+  };
+
+  return {
+    id: resume.id || '',
+    name: resume.name || 'Unknown',
+    email: resume.email || '',
+    score: resume.fitment_score || 0,
+    jobRole: resume.best_fit_for || 'Not Specified',
+    experience: formatExperience(resume.longevity_years),
+    education: formatEducation(resume.education),
+    about: resume.summary || 'No summary available',
+    profileImage: '',
     personalityScores: {
-      extroversion: 68,
-      agreeableness: 72,
-      openness: 85,
-      neuroticism: 42,
-      conscientiousness: 81
-    }
-  },
-  {
-    id: "3",
-    name: "Dhruv Gupta",
-    email: "2022a6015@mietjammu.in",
-    score: 59.99,
-    jobRole: "Software Engineer",
-    experience: "4+ Years",
-    education: "M.Tech in Software Engineering",
-    about: "Software engineer with expertise in full-stack development.",
-    profileImage: "/images/DhruvGupta.png", // Add image path here
-    personalityScores: {
-      extroversion: 45,
-      agreeableness: 60,
-      openness: 55,
-      neuroticism: 25,
-      conscientiousness: 70
-    }
-  },
-  {
-    id: "4",
-    name: "Aarush Wali",
-    email: "2022a6002@mietjammu.in",
-    score: 80.45,
-    jobRole: "AI Researcher",
-    experience: "2+ Years",
-    education: "M.Sc. in AI",
-    about: "AI researcher specializing in computer vision and natural language processing.",
-    profileImage: "/images/AarushWali.png", // Add image path here
-    personalityScores: {
-      extroversion: 50,
-      agreeableness: 58,
-      openness: 80,
-      neuroticism: 30,
-      conscientiousness: 90
-    }
-  },
-  {
-    id: "5",
-    name: "Gandharv Kaloo",
-    email: "2022a6053@mietjammu.in",
-    score: 58.36,
-    jobRole: "Data Scientist",
-    experience: "5+ Years",
-    education: "Ph.D. in Data Science",
-    about: "Experienced data scientist working on machine learning and AI projects.",
-    profileImage: "/images/GandharvKaloo.png", // Add image path here
-    personalityScores: {
-      extroversion: 60,
-      agreeableness: 70,
-      openness: 75,
-      neuroticism: 35,
-      conscientiousness: 85
-    }
-  },
-  {
-    id: "6",
-    name: "Antra Bali",
-    email: "2022a6010@mietjammu.in",
-    score: 64.78,
-    jobRole: "AI Engineer",
-    experience: "4+ Years",
-    education: "M.Tech in AI",
-    about: "Passionate about applying AI techniques to solve real-world problems.",
-    profileImage: "/images/AntraBali.png", // Add image path here
-    personalityScores: {
-      extroversion: 55,
-      agreeableness: 65,
-      openness: 70,
-      neuroticism: 28,
-      conscientiousness: 80
-    }
-  },
-  {
-    id: "7",
-    name: "Kamakshi Sharma",
-    email: "2022a6024@mietjammu.in",
-    score: 43.12,
-    jobRole: "Full Stack Developer",
-    experience: "3+ Years",
-    education: "B.Tech in Computer Science",
-    about: "Full stack developer with expertise in frontend and backend technologies.",
-    profileImage: "/images/KamakshiSharma.png", // Add image path here
-    personalityScores: {
-      extroversion: 60,
-      agreeableness: 75,
-      openness: 65,
-      neuroticism: 40,
-      conscientiousness: 88
-    }
-  },
-  {
-    id: "8",
-    name: "Sukriti Chadda",
-    email: "anjali.gupta@example.com",
-    score: 57.87,
-    jobRole: "Web Developer",
-    experience: "2+ Years",
-    education: "B.Sc. in Computer Science",
-    about: "Web developer specializing in responsive and scalable web applications.",
-    profileImage: "/images/anjali-profile.jpg", // Add image path here
-    personalityScores: {
-      extroversion: 50,
-      agreeableness: 60,
-      openness: 80,
-      neuroticism: 22,
-      conscientiousness: 72
-    }
-  },
-  {
-    id: "9",
-    name: "Rohit Sharma",
-    email: "2022a6038@mietjammu.in",
-    score: 76.94,
-    jobRole: "Cloud Architect",
-    experience: "6+ Years",
-    education: "M.Tech in Cloud Computing",
-    about: "Cloud architect specializing in scalable and secure cloud infrastructure.",
-    profileImage: "/images/sandeep-profile.jpg", // Add image path here
-    personalityScores: {
-      extroversion: 62,
-      agreeableness: 75,
-      openness: 70,
-      neuroticism: 35,
-      conscientiousness: 85
-    }
-  }
-];
+      extroversion: resume.extroversion || 0,
+      agreeableness: resume.agreeableness || 0,
+      openness: resume.openness || 0,
+      neuroticism: resume.neuroticism || 0,
+      conscientiousness: resume.conscientiousness || 0
+    },
+    phone: resume.phone || '',
+    address: resume.address || '',
+    summary: resume.summary || '',
+    best_fit_for: resume.best_fit_for || '',
+    created_at: resume.created_at || new Date().toISOString(),
+    fitment_score: resume.fitment_score || 0,
+    skills: formatSkills(resume.skills)
+  };
+};
 
 const PersonalityBar = ({
   label,
@@ -202,88 +101,178 @@ const PersonalityBar = ({
       <span>{label}</span>
       <span>{value}%</span>
     </div>
-    <Progress value={value} className="h-2" />
+    <div className="w-full bg-gray-200 rounded-full h-2">
+      <div 
+        className="bg-blue-500 h-2 rounded-full" 
+        style={{ width: `${value}%` }}
+      />
+    </div>
   </div>
 );
 
 export default function Users() {
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const location = useLocation();
-  
+
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await axios.get(`${API_BASE_URL}/resumes`);
+      
+      if (response.data?.success && Array.isArray(response.data.data)) {
+        const userProfiles = response.data.data.map((resume: any) => mapResumeToUserProfile(resume));
+        setUsers(userProfiles);
+      } else {
+        throw new Error('Invalid response format from server');
+      }
+    } catch (err) {
+      console.error('Error in fetchUsers:', err);
+      setError('Failed to fetch users. Please make sure the backend server is running.');
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || 'Failed to connect to the server',
+        variant: "destructive",
+      });
+      setUsers([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Check for selectedId in URL query params
   useEffect(() => {
     const queryParams = new URLSearchParams(location.search);
     const selectedId = queryParams.get('selected');
     
     if (selectedId) {
-      const user = users.find(user => user.id === selectedId);
+      const user = users.find(u => u.id === selectedId);
       if (user) {
         setSelectedUser(user);
       }
     }
-  }, [location.search]);
+  }, [location.search, users]);
+
+  // Initial data fetch
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-pulse text-gray-500">Loading users...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-500">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div className="p-6 flex justify-between items-center border-b text-black">
-          <h1 className="text-3xl font-bold tracking-tight">User List</h1>
-          <Button size="icon" variant="outline">
-            <RefreshCw size={16} />
+        <div className="p-6 flex justify-between items-center border-b">
+          <div>
+            <h1 className="text-2xl font-bold">Candidates</h1>
+            <p className="text-gray-500 mt-1">{users.length} candidates found</p>
+          </div>
+          <Button 
+            onClick={fetchUsers} 
+            variant="outline" 
+            size="icon"
+          >
+            <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead>Candidate</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Suitable For</TableHead>
                 <TableHead>Score</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell
-                    className={
-                      user.score >= 60
-                        ? "text-green-500"
-                        : user.score >= 55
-                        ? "text-orange-500"
-                        : "text-red-500"
-                    }
-                  >
-                    {user.score.toFixed(2)}%
+                <TableRow 
+                  key={user.id} 
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedUser(user)}
+                >
+                  <TableCell className="font-medium">
+                    <div className="flex items-center space-x-3">
+                      <img 
+                        className="h-10 w-10 rounded-full object-cover" 
+                        src={user.profileImage} 
+                        alt={user.name}
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                        }}
+                      />
+                      <div>
+                        <div className="font-medium">{user.name}</div>
+                        {user.education && (
+                          <span className="text-xs text-gray-500">
+                            {user.education}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        size="sm"
-                        className="bg-blue-500 hover:bg-blue-600"
-                        onClick={() => setSelectedUser(user)}
-                      >
-                        View
-                      </Button>
-                      <Button size="sm" variant="destructive">
-                        Delete
-                      </Button>
-                    </div>
+                    <div className="text-sm text-gray-900">{user.email}</div>
+                    <div className="text-sm text-gray-500">{user.phone || 'No phone'}</div>
+                  </TableCell>
+                  <TableCell>
+                    {user.best_fit_for ? (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {user.best_fit_for}
+                      </span>
+                    ) : (
+                      <span className="text-sm text-gray-500">Not specified</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {user.fitment_score !== undefined && (
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+                        user.fitment_score > 80 ? 'bg-green-100 text-green-800' : 
+                        user.fitment_score > 60 ? 'bg-blue-100 text-blue-800' : 
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {user.fitment_score.toFixed(1)}%
+                      </span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="sm">View</Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+        
+        {selectedUser && (
+          <UserDetailsDialog
+            isOpen={true}
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
+          />
+        )}
       </div>
-
-      <UserDetailsDialog 
-        isOpen={!!selectedUser} 
-        onClose={() => setSelectedUser(null)}
-        user={selectedUser}
-      />
     </div>
   );
 }
