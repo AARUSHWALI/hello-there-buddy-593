@@ -26,14 +26,46 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // CORS configuration
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:8080',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+const configureCors = () => {
+  // Get allowed origins from environment variable
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+    : ['http://localhost:3000', 'http://localhost:5000', 'http://localhost:8080'];
+
+  console.log('Allowed CORS origins:', allowedOrigins);
+
+  return {
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        return callback(null, true);
+      }
+      
+      const msg = `The CORS policy for this site does not allow access from the specified origin: ${origin}`;
+      console.warn(msg);
+      return callback(new Error(msg), false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Request-Method',
+      'Access-Control-Request-Headers'
+    ],
+    exposedHeaders: ['Content-Range', 'X-Total-Count'],
+    maxAge: 86400 // 24 hours
+  };
 };
 
-// Middleware
+// Apply CORS middleware
+const corsOptions = configureCors();
 app.use(cors(corsOptions));
 
 // Handle preflight requests
@@ -46,6 +78,9 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
   next();
 });
+
+// Add API base URL to app locals for use in routes
+app.locals.API_BASE_URL = process.env.API_BASE_URL || `http://localhost:${PORT}`;
 
 // API Routes
 app.use('/api/interviews', interviewRoutes);

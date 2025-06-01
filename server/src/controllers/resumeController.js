@@ -114,21 +114,31 @@ const uploadFileToStorage = async (file) => {
 // Get all resumes with pagination
 export const getResumes = async (req, res) => {
   try {
+    console.log('Fetching all resumes...');
+    
     const { page = 1, limit = 10 } = req.query;
-    const from = (page - 1) * limit;
-    const to = from + parseInt(limit) - 1;
-
-    const { data, error, count } = await supabase
+    const offset = (page - 1) * limit;
+    
+    const { data: resumes, error, count } = await supabase
       .from('resumes')
       .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
-      .range(from, to);
-
+      .range(offset, offset + limit - 1);
+      
     if (error) throw error;
-
+    
+    // Get API base URL from app.locals
+    const apiBaseUrl = req.app.locals.API_BASE_URL || 'http://localhost:5000';
+    
+    // Transform the data to include full file URLs
+    const resumesWithUrls = resumes.map(resume => ({
+      ...resume,
+      file_url: resume.file_path ? `${apiBaseUrl}/api/resumes/${resume.id}/file` : null
+    }));
+    
     res.json({
       success: true,
-      data: data,
+      data: resumesWithUrls,
       pagination: {
         total: count,
         page: parseInt(page),
@@ -137,12 +147,8 @@ export const getResumes = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching resumes:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Failed to fetch resumes',
-      message: error.message 
-    });
+    console.error('Error getting resumes:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
@@ -180,12 +186,20 @@ export const getResumeById = async (req, res) => {
       .single();
 
     if (error) throw error;
-    if (!data) return res.status(404).json({ error: 'Resume not found' });
+    if (!data) {
+      return res.status(404).json({ success: false, error: 'Resume not found' });
+    }
 
-    res.json(data);
+    // Get API base URL from app.locals
+    const apiBaseUrl = req.app.locals.API_BASE_URL || 'http://localhost:5000';
+    
+    // Add full file URL
+    data.file_url = data.file_path ? `${apiBaseUrl}/api/resumes/${data.id}/file` : null;
+
+    res.json({ success: true, data });
   } catch (error) {
-    console.error('Error fetching resume:', error);
-    res.status(500).json({ error: 'Failed to fetch resume' });
+    console.error('Error getting resume:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };
 
@@ -296,7 +310,23 @@ export const createResume = async (req, res) => {
     }
 
     console.log('Resume created successfully:', JSON.stringify(insertedData[0], null, 2));
-    res.status(201).json(insertedData[0]);
+    
+    // Get API base URL from app.locals
+    const apiBaseUrl = req.app.locals.API_BASE_URL || 'http://localhost:5000';
+    
+    // Add file URL to the response
+    const responseData = {
+      ...insertedData[0],
+      file_url: insertedData[0].file_path 
+        ? `${apiBaseUrl}/api/resumes/${insertedData[0].id}/file` 
+        : null
+    };
+    
+    res.status(201).json({
+      success: true,
+      message: 'Resume created successfully',
+      data: responseData
+    });
   } catch (error) {
     console.error('Unexpected error in createResume:', {
       error: error.message,
