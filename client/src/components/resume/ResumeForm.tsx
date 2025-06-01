@@ -100,17 +100,17 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
       [field]: numValue
     });
     
-    // If we're changing numberOfJobs or longevityYears, update averageExperience
-    if (field === 'numberOfJobs' || field === 'longevityYears') {
-      const longevity = field === 'longevityYears' ? numValue : resumeData.longevityYears;
-      const jobs = field === 'numberOfJobs' ? numValue : resumeData.numberOfJobs;
+    // If we're changing number_of_jobs or longevity_years, update average_experience
+    if (field === 'number_of_jobs' || field === 'longevity_years') {
+      const longevity = field === 'longevity_years' ? numValue : resumeData.longevity_years;
+      const jobs = field === 'number_of_jobs' ? numValue : resumeData.number_of_jobs;
       
       const avgExp = jobs > 0 ? longevity / jobs : 0;
       
       setResumeData(prev => {
         const updated = {
           ...prev!,
-          averageExperience: parseFloat(avgExp.toFixed(2))
+          average_experience: parseFloat(avgExp.toFixed(2))
         };
         
         // Update JSON data
@@ -457,20 +457,20 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
                 <div className="space-y-2">
-                  <Label htmlFor="ugInstitute" className="text-sm font-medium">UG Institute</Label>
+                  <Label htmlFor="ug_institute" className="text-sm font-medium">UG Institute</Label>
                   <Input 
-                    id="ugInstitute" 
-                    value={resumeData.ugInstitute || ''} 
-                    onChange={(e) => setResumeData({...resumeData, ugInstitute: e.target.value})}
+                    id="ug_institute" 
+                    value={resumeData.ug_institute || ''} 
+                    onChange={(e) => setResumeData({...resumeData, ug_institute: e.target.value})}
                     className="border-purple-100 focus-visible:ring-purple-500"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pgInstitute" className="text-sm font-medium">PG Institute</Label>
+                  <Label htmlFor="pg_institute" className="text-sm font-medium">PG Institute</Label>
                   <Input 
-                    id="pgInstitute" 
-                    value={resumeData.pgInstitute || ''} 
-                    onChange={(e) => setResumeData({...resumeData, pgInstitute: e.target.value})}
+                    id="pg_institute" 
+                    value={resumeData.pg_institute || ''} 
+                    onChange={(e) => setResumeData({...resumeData, pg_institute: e.target.value})}
                     className="border-purple-100 focus-visible:ring-purple-500"
                   />
                 </div>
@@ -480,8 +480,8 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">PhD Institute</Label>
                   <RadioGroup 
-                    value={resumeData.phdInstitute.toString()} 
-                    onValueChange={(value) => handleRadioChange('phdInstitute', value)}
+                    value={(resumeData.phd_institute ?? 0).toString()} 
+                    onValueChange={(value) => handleRadioChange('phd_institute', value)}
                     className="flex space-x-4"
                   >
                     <div className="flex items-center space-x-2">
@@ -498,8 +498,8 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">J&K Resident</Label>
                   <RadioGroup 
-                    value={resumeData.isJK.toString()} 
-                    onValueChange={(value) => handleRadioChange('isJK', value)}
+                    value={resumeData.is_jk.toString()} 
+                    onValueChange={(value) => handleRadioChange('is_jk', value)}
                     className="flex space-x-4"
                   >
                     <div className="flex items-center space-x-2">
@@ -727,36 +727,36 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                   <h3 className="font-medium text-lg text-purple-800 mb-4">Experience Metrics</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="longevityYears" className="text-sm font-medium">Longevity Years</Label>
+                      <Label htmlFor="longevity_years" className="text-sm font-medium">Longevity Years</Label>
                       <Input 
-                        id="longevityYears" 
+                        id="longevity_years" 
                         type="number"
                         min="0"
                         step="0.1"
-                        value={resumeData.longevityYears} 
-                        onChange={(e) => handleNumberChange('longevityYears', e.target.value)}
+                        value={resumeData.longevity_years} 
+                        onChange={(e) => handleNumberChange('longevity_years', e.target.value)}
                         className="border-purple-100 focus-visible:ring-purple-500"
                       />
                       <p className="text-xs text-purple-700">Working years only (not studying)</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="numberOfJobs" className="text-sm font-medium">Number of Jobs</Label>
+                      <Label htmlFor="number_of_jobs" className="text-sm font-medium">Number of Jobs</Label>
                       <Input 
-                        id="numberOfJobs" 
+                        id="number_of_jobs" 
                         type="number"
                         min="0"
-                        value={resumeData.numberOfJobs} 
-                        onChange={(e) => handleNumberChange('numberOfJobs', e.target.value)}
+                        value={resumeData.number_of_jobs} 
+                        onChange={(e) => handleNumberChange('number_of_jobs', e.target.value)}
                         className="border-purple-100 focus-visible:ring-purple-500"
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="averageExperience" className="text-sm font-medium">Average Experience</Label>
+                      <Label htmlFor="average_experience" className="text-sm font-medium">Average Experience</Label>
                       <Input 
-                        id="averageExperience" 
+                        id="average_experience" 
                         type="number"
                         step="0.01"
-                        value={resumeData.averageExperience} 
+                        value={resumeData.average_experience} 
                         readOnly
                         className="bg-gray-50 border-purple-100"
                       />
@@ -794,7 +794,7 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="skills" className="text-sm font-medium">Skills (comma separated)</Label>
-                    <span className="text-sm text-purple-700 font-medium">Count: {resumeData.skillsCount}</span>
+                    <span className="text-sm text-purple-700 font-medium">Count: {resumeData.skills_count}</span>
                   </div>
                   <Input 
                     id="skills" 
@@ -826,7 +826,7 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="projects" className="text-sm font-medium">Projects (comma separated)</Label>
-                    <span className="text-sm text-purple-700 font-medium">Count: {resumeData.projectsCount}</span>
+                    <span className="text-sm text-purple-700 font-medium">Count: {resumeData.projects_count}</span>
                   </div>
                   <Input 
                     id="projects" 
@@ -858,7 +858,7 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label htmlFor="achievements" className="text-sm font-medium">Achievements (comma separated)</Label>
-                    <span className="text-sm text-purple-700 font-medium">Count: {resumeData.achievementsCount}</span>
+                    <span className="text-sm text-purple-700 font-medium">Count: {resumeData.achievements_count}</span>
                   </div>
                   <Input 
                     id="achievements" 
@@ -891,7 +891,7 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="trainings" className="text-sm font-medium">Trainings (comma separated)</Label>
-                      <span className="text-sm text-purple-700 font-medium">Count: {resumeData.trainingsCount}</span>
+                      <span className="text-sm text-purple-700 font-medium">Count: {resumeData.trainings_count}</span>
                     </div>
                     <Input 
                       id="trainings" 
@@ -904,7 +904,7 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="workshops" className="text-sm font-medium">Workshops (comma separated)</Label>
-                      <span className="text-sm text-purple-700 font-medium">Count: {resumeData.workshopsCount}</span>
+                      <span className="text-sm text-purple-700 font-medium">Count: {resumeData.workshops_count}</span>
                     </div>
                     <Input 
                       id="workshops" 
@@ -929,19 +929,19 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="researchPapers" className="text-sm font-medium">Research Papers (comma separated)</Label>
-                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.researchPapersCount}</span>
+                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.research_papers_count}</span>
 
                   <Input 
                     id="researchPapers" 
-                    value={resumeData.researchPapers?.join(', ') || ''} 
-                    onChange={(e) => handleStringArrayChange('researchPapers', e.target.value)}
+                    value={resumeData.research_papers?.join(', ') || ''} 
+                    onChange={(e) => handleStringArrayChange('research_papers', e.target.value)}
                     className="border-purple-100 focus-visible:ring-purple-500"
                   />
                 </div>
                 
                 <div className="space-y-2">
                   <Label htmlFor="patents" className="text-sm font-medium">Patents (comma separated)</Label>
-                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.patentsCount}</span>
+                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.patents_count}</span>
 
                   <Input 
                     id="patents" 
@@ -953,7 +953,7 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
                 
                 <div className="space-y-2">
                   <Label htmlFor="books" className="text-sm font-medium">Books (comma separated)</Label>
-                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.booksCount}</span>
+                  <span className="text-sm text-purple-700 font-medium">Count: {resumeData.books_count}</span>
                   <Input 
                     id="books" 
                     value={resumeData.books?.join(', ') || ''} 

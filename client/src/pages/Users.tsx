@@ -4,8 +4,43 @@ import { RefreshCw } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import UserDetailsDialog from "@/components/users/UserDetailsDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import axios from "axios";
 import { toast } from "@/components/ui/use-toast";
+import { getApiUrl } from "@/config/api.config";
+
+// API client with error handling
+const apiClient = {
+  get: async (endpoint: string) => {
+    try {
+      const response = await axios.get(getApiUrl(endpoint as any));
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching ${endpoint}:`, error);
+      throw error;
+    }
+  },
+  getCriteria: async () => {
+    try {
+      return await apiClient.get('criteria');
+    } catch (error) {
+      console.error('Error fetching criteria, using defaults:', error);
+      return {
+        best_fit: 80,
+        average_fit: 50,
+        not_fit: 0
+      };
+    }
+  },
+  getUsers: async () => {
+    return await apiClient.get('users');
+  }
+};
+
+// Alias for backward compatibility
+const criteriaApi = {
+  getCriteria: apiClient.getCriteria
+};
 
 export interface UserProfile {
   id: string;
@@ -17,6 +52,11 @@ export interface UserProfile {
   education?: string;
   about?: string;
   profileImage?: string;
+  phone?: string;
+  status: 'active' | 'inactive' | 'pending';
+  created_at?: string;
+  fitment_score?: number;
+  skills?: string[];
   personalityScores?: {
     extroversion: number;
     agreeableness: number;
@@ -24,13 +64,12 @@ export interface UserProfile {
     neuroticism: number;
     conscientiousness: number;
   };
-  phone?: string;
   address?: string;
   summary?: string;
   best_fit_for?: string;
-  created_at?: string;
-  fitment_score?: number;
-  skills?: string[];
+  longevity_years?: number;
+  candidate_type?: boolean | string | null;
+  file_url?: string;
 }
 
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -79,13 +118,16 @@ const mapResumeToUserProfile = (resume: any): UserProfile => {
       neuroticism: resume.neuroticism || 0,
       conscientiousness: resume.conscientiousness || 0
     },
+    status: resume.status || 'pending',
     phone: resume.phone || '',
     address: resume.address || '',
     summary: resume.summary || '',
     best_fit_for: resume.best_fit_for || '',
     created_at: resume.created_at || new Date().toISOString(),
     fitment_score: resume.fitment_score || 0,
-    skills: formatSkills(resume.skills)
+    skills: formatSkills(resume.skills),
+    candidate_type: resume.candidate_type,
+    file_url: resume.file_url,
   };
 };
 
@@ -115,17 +157,44 @@ export default function Users() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fitmentCriteria, setFitmentCriteria] = useState({ best_fit: 80, average_fit: 50, not_fit: 0 });
   const location = useLocation();
+
+  // Fetch fitment criteria
+  useEffect(() => {
+    const fetchCriteria = async () => {
+      try {
+        const data = await apiClient.getCriteria();
+        setFitmentCriteria({
+          best_fit: data.best_fit || 80,
+          average_fit: data.average_fit || 50,
+          not_fit: data.not_fit || 0
+        });
+      } catch (error) {
+        console.error('Failed to fetch fitment criteria, using defaults', error);
+      }
+    };
+    
+    fetchCriteria();
+  }, []);
+  
+  // Determine fitment status based on score
+  const getFitmentStatus = (score: number) => {
+    if (score >= fitmentCriteria.best_fit) return { status: 'Best Fit', color: 'bg-green-100 text-green-800' };
+    if (score >= fitmentCriteria.average_fit) return { status: 'Average Fit', color: 'bg-yellow-100 text-yellow-800' };
+    if (score >= fitmentCriteria.not_fit) return { status: 'Not Fit', color: 'bg-red-100 text-red-800' };
+    return { status: 'Not Fit', color: 'bg-red-100 text-red-800' };
+  };
 
   const fetchUsers = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await axios.get(`${API_BASE_URL}/resumes`);
+      const response = await apiClient.getUsers();
       
-      if (response.data?.success && Array.isArray(response.data.data)) {
-        const userProfiles = response.data.data.map((resume: any) => mapResumeToUserProfile(resume));
+      if (response?.success && Array.isArray(response.data)) {
+        const userProfiles = response.data.map((resume: any) => mapResumeToUserProfile(resume));
         setUsers(userProfiles);
       } else {
         throw new Error('Invalid response format from server');
@@ -200,8 +269,10 @@ export default function Users() {
               <TableRow>
                 <TableHead>Candidate</TableHead>
                 <TableHead>Contact</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Suitable For</TableHead>
                 <TableHead>Score</TableHead>
+                <TableHead>Fitment Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -214,21 +285,21 @@ export default function Users() {
                 >
                   <TableCell className="font-medium">
                     <div className="flex items-center space-x-3">
-                      <img 
+                      {/* <img 
                         className="h-10 w-10 rounded-full object-cover" 
                         src={user.profileImage} 
                         alt={user.name}
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                         }}
-                      />
+                      /> */}
                       <div>
                         <div className="font-medium">{user.name}</div>
-                        {user.education && (
+                        {/* {user.education && (
                           <span className="text-xs text-gray-500">
                             {user.education}
                           </span>
-                        )}
+                        )} */}
                       </div>
                     </div>
                   </TableCell>
@@ -237,27 +308,55 @@ export default function Users() {
                     <div className="text-sm text-gray-500">{user.phone || 'No phone'}</div>
                   </TableCell>
                   <TableCell>
-                    {user.best_fit_for ? (
+                    {(() => {
+                      const candidateType = user.candidate_type;
+                      
+                      if (candidateType === true) {
+                        return <div className="text-sm text-gray-900">Experienced</div>;
+                      } else if (candidateType === false) {
+                        return <div className="text-sm text-gray-900">Fresher</div>;
+                      } else if (candidateType === null || candidateType === undefined) {
+                        return <div className="text-sm text-gray-900">Not specified</div>;
+                      } else if (typeof candidateType === 'string' && candidateType.toLowerCase() === 'not specified') {
+                        return <div className="text-sm text-gray-900">Not specified</div>;
+                      } else {
+                        // Fallback for any other values
+                        return <div className="text-sm text-gray-900">Fresher</div>;
+                      }
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    {user.jobRole ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                        {user.best_fit_for}
+                        {user.jobRole}
                       </span>
                     ) : (
                       <span className="text-sm text-gray-500">Not specified</span>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {user.fitment_score !== undefined && (
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
-                        user.fitment_score > 80 ? 'bg-green-100 text-green-800' : 
-                        user.fitment_score > 60 ? 'bg-blue-100 text-blue-800' : 
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {user.fitment_score.toFixed(1)}%
-                      </span>
-                    )}
+                  <TableCell className="text-right">
+                    {user.fitment_score !== undefined ? (
+                      <span className="font-medium">{user.fitment_score.toFixed(1)}%</span>
+                    ) : 'N/A'}
                   </TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="sm">View</Button>
+                    {user.fitment_score !== undefined ? (
+                      <Badge className={getFitmentStatus(user.fitment_score).color}>
+                        {getFitmentStatus(user.fitment_score).status}
+                      </Badge>
+                    ) : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedUser(user);
+                      }}
+                    >
+                      View Details
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

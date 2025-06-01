@@ -6,6 +6,7 @@ import type { UserProfile } from "@/pages/Users";
 import PersonalityPieChart from "./PersonalityPieChart";
 import FitmentScoreGauge from "./FitmentScoreGauge";
 import { format } from "date-fns";
+import { toast } from "@/components/ui/use-toast";
 
 interface UserDetailsDialogProps {
   isOpen: boolean;
@@ -127,8 +128,26 @@ export default function UserDetailsDialog({ isOpen, onClose, user }: UserDetails
                       <span>{user.personalityScores.conscientiousness}%</span>
                     </div>
                     
-                    <Button className="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white">
-                      View Resume
+                    <Button 
+                      onClick={() => {
+                        if (user.file_url) {
+                          // Ensure the URL is absolute
+                          const resumeUrl = user.file_url.startsWith('http') 
+                            ? user.file_url 
+                            : `${window.location.origin}${user.file_url.startsWith('/') ? '' : '/'}${user.file_url}`;
+                          window.open(resumeUrl, '_blank', 'noopener,noreferrer');
+                        } else {
+                          toast({
+                            title: "Resume not available",
+                            description: "This user doesn't have a resume uploaded.",
+                            variant: "destructive"
+                          });
+                        }
+                      }} 
+                      className="w-full mt-6 bg-blue-500 hover:bg-blue-600 text-white"
+                      disabled={!user.file_url}
+                    >
+                      {user.file_url ? "View Resume" : "No Resume Available"}
                     </Button>
                   </div>
                 </div>

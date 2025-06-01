@@ -7,22 +7,12 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+import { Candidate } from "./CandidateScores";
+
 interface CandidateDetailsProps {
   isOpen: boolean;
   onClose: () => void;
-  candidate: {
-    name: string;
-    email: string;
-    fitmentScore: number;
-    phone: string;
-    education: string;
-    experience: string;
-    skills: string[];
-    projects: string[];
-    expectedRole: string;
-    location: string;
-    longevityScore: number;
-  } | null;
+  candidate: Candidate | null;
 }
 
 export default function CandidateDetailsDialog({ isOpen, onClose, candidate }: CandidateDetailsProps) {
@@ -49,11 +39,11 @@ export default function CandidateDetailsDialog({ isOpen, onClose, candidate }: C
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium">Fitment Score</span>
               <span className={`text-lg font-semibold ${
-                candidate.fitmentScore >= 60 ? "text-green-600" :
-                candidate.fitmentScore >= 50 ? "text-yellow-600" :
+                candidate.fitment_score >= 60 ? "text-green-600" :
+                candidate.fitment_score >= 50 ? "text-yellow-600" :
                 "text-red-600"
               }`}>
-                {candidate.fitmentScore.toFixed(1)}%
+                {candidate.fitment_score.toFixed(1)}%
               </span>
             </div>
           </div>

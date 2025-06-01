@@ -9,29 +9,29 @@ export interface ResumeData {
   education: Education[];
   experience: Experience[];
   skills: string[];
-  ugInstitute?: string;
-  pgInstitute?: string;
-  phdInstitute: number; // 0 for no, 1 for yes
-  longevityYears: number; // working years count
-  numberOfJobs: number;
-  averageExperience: number; // longevity/number of jobs
-  skillsCount: number;
-  achievementsCount: number;
+  ug_institute?: string;
+  pg_institute?: string;
+  phd_institute: number; // 0 for no, 1 for yes
+  longevity_years: number; // working years count
+  number_of_jobs: number;
+  average_experience: number; // longevity/number of jobs
+  skills_count: number;
+  achievements_count: number;
   achievements: string[];
-  trainingsCount: number;
+  trainings_count: number;
   trainings: string[];
-  workshopsCount: number;
+  workshops_count: number;
   workshops: string[];
-  researchPapers: string[];
-  researchPapersCount: number;
+  research_papers: string[];
+  research_papers_count: number;
   patents: string[];
-  patentsCount: number;
+  patents_count: number;
   books: string[];
-  booksCount: number;
-  isJK: number; // 0 for no, 1 for yes (J&K)
-  projectsCount: number;
+  books_count: number;
+  is_jk: number; // 0 for no, 1 for yes (J&K)
+  projects_count: number;
   projects: string[];
-  bestFitFor?: string; // Making this optional and adding it to the interface
+  best_fit_for?: string; // Making this optional and adding it to the interface
 }
 
 export interface Education {

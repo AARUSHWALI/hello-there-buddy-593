@@ -7,8 +7,8 @@ import StatCard from "@/components/dashboard/StatCard";
 import JobFitmentTable from "@/components/dashboard/JobFitmentTable";
 import CandidateScores from "@/components/dashboard/CandidateScores";
 import InterviewScheduleDialog from "@/components/dashboard/InterviewScheduleDialog";
-import RecentActivity from "@/components/dashboard/RecentActivity";
-import CandidateStatus from "@/components/dashboard/CandidateStatus";
+// import RecentActivity from "@/components/dashboard/RecentActivity";
+// import CandidateStatus from "@/components/dashboard/CandidateStatus";
 import { DashboardStats, Candidate, Interview } from "@/types/dashboard";
 
 const API_BASE_URL = 'http://localhost:5000/api';
@@ -405,10 +405,10 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <RecentActivity />
         <CandidateStatus approvedCount={45} reviewCount={30} rejectedCount={25} />
-      </div>
+      </div> */}
 
       <InterviewScheduleDialog 
         isOpen={showInterviews} 

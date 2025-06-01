@@ -43,12 +43,12 @@
       "CSS",
       "Git"
     ],
-    "ugInstitute": "Stanford University",
-    "pgInstitute": "",
-    "phdInstitute": 0,
-    "longevityYears": 5,
-    "numberOfJobs": 2,
-    "averageExperience": 2.5,
+    "ug_institute": "Stanford University",
+    "pg_institute": "",
+    "phd_institute": 0,
+    "longevity_years": 5,
+    "number_of_jobs": 2,
+    "average_experience": 2.5,
     "skillsCount": 7,
     "achievementsCount": 2,
     "achievements": [
@@ -67,12 +67,12 @@
     "researchPapers": [],
     "patents": [],
     "books": [],
-    "isJK": 0,
+    "is_jk": 0,
     "projectsCount": 3,
     "projects": [
       "E-commerce Platform",
       "Healthcare Portal",
       "Mobile Banking App"
     ],
-    "bestFitFor": "Full Stack Developer"
+    "best_fit_for": "Full Stack Developer"
   }

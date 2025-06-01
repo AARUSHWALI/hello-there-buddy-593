@@ -6,8 +6,27 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
+  withCredentials: true,
 });
+
+// Add a request interceptor to handle form data
+api.interceptors.request.use(
+  (config) => {
+    // If the data is FormData, remove the Content-Type header
+    // to let the browser set it with the correct boundary
+    if (config.data instanceof FormData) {
+      if (config.headers) {
+        delete config.headers['Content-Type'];
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Add a response interceptor to handle errors consistently
 api.interceptors.response.use(
@@ -51,16 +70,20 @@ export const saveResume = async (
     // Add resume data as JSON
     formData.append('data', JSON.stringify(resumeData));
     
-    // If there's a file, add it to the form data
+    // If there's a file, add it to the form data with field name 'file' to match the server's multer configuration
     if (file) {
-      formData.append('resumeFile', file);
+      formData.append('file', file);
     }
     
-    // Remove the Content-Type header to let the browser set it with the correct boundary
-    const response = await api.post('/resume', formData, {
+    // Make the request with form data
+    // The interceptor will handle the Content-Type header for FormData
+    const response = await api.post('/resumes', formData, {
       headers: {
-        'Content-Type': undefined, // Let the browser set the correct content type with boundary
+        // The interceptor will handle the Content-Type header
       },
+      // Required for Node.js 18+ when sending a body with certain content types
+      // @ts-ignore - The type definition might not include this option yet
+      duplex: 'half'
     });
     
     return { 
@@ -79,7 +102,7 @@ export const saveResume = async (
 
 export const getResume = async (id: string): Promise<ApiResponse<ResumeData>> => {
   try {
-    const response = await api.get(`/resume/${id}`);
+    const response = await api.get(`/resumes/${id}`);
     return { 
       success: true, 
       data: response.data 

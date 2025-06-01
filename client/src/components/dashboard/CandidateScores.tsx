@@ -2,24 +2,38 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import CandidateDetailsDialog from "./CandidateDetailsDialog";
 
-interface Candidate {
+export interface Candidate {
+  id: string;
   name: string;
   email: string;
   fitment_score: number;
+  phone?: string;
+  education?: string;
+  experience?: string;
+  skills?: string[];
+  projects?: string[];
+  expectedRole?: string;
+  location?: string;
+  status?: string;
 }
 
 interface CandidateScoresProps {
   candidates: Candidate[];
+  onViewUser?: (candidate: Candidate) => void;
 }
 
-export default function CandidateScores({ candidates }: CandidateScoresProps) {
+export default function CandidateScores({ candidates, onViewUser }: CandidateScoresProps) {
   const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
   
   const handleCandidateClick = (candidate: Candidate) => {
-    setSelectedCandidate(candidate);
+    if (onViewUser) {
+      onViewUser(candidate);
+    } else {
+      setSelectedCandidate(candidate);
+    }
   };
 
   return (

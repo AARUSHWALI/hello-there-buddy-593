@@ -47,16 +47,16 @@ export default function Sidebar() {
       path: "/resume",
       icon: FileText,
     },
-    {
-      name: "Recent Activity",
-      path: "/recent-activity",
-      icon: Activity,
-    },
-    {
-      name: "Candidate Status",
-      path: "/candidate-status",
-      icon: PieChart,
-    },
+    // {
+    //   name: "Recent Activity",
+    //   path: "/recent-activity",
+    //   icon: Activity,
+    // },
+    // {
+    //   name: "Candidate Status",
+    //   path: "/candidate-status",
+    //   icon: PieChart,
+    // },
   ];
   
   return (
