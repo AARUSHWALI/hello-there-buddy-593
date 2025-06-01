@@ -36,14 +36,14 @@ const configs: Record<Environment, ApiConfig> = {
     },
   },
   development: {
-    baseUrl: 'https://dev.api.yourdomain.com/api',
+    baseUrl: 'https://people-ai-new.onrender.com/api',
     endpoints: {
       users: '/resumes',
       criteria: '/criteria',
     },
   },
   production: {
-    baseUrl: 'https://api.yourdomain.com/api',
+    baseUrl: 'https://people-ai-new.onrender.com/api',
     endpoints: {
       users: '/resumes',
       criteria: '/criteria',
