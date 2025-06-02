@@ -5,7 +5,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { toast as sonnerToast } from 'sonner';
 
 export type PersonalityScores = {
-  extroversion: number;
+  extraversion: number;
   agreeableness: number;
   openness: number;
   neuroticism: number;

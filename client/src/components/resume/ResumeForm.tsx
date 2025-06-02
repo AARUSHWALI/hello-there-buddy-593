@@ -77,20 +77,33 @@ export default function ResumeForm({ resumeData, setResumeData, parsedFile, json
     setJsonData(JSON.stringify(updatedData, null, 2));
   };
 
+  // Utility to map array field to its count field
+  const arrayFieldToCountField = (field: keyof ResumeData): keyof ResumeData | null => {
+    switch (field) {
+      case 'achievements': return 'achievements_count';
+      case 'trainings': return 'trainings_count';
+      case 'workshops': return 'workshops_count';
+      case 'research_papers': return 'research_papers_count';
+      case 'projects': return 'projects_count';
+      case 'patents': return 'patents_count';
+      case 'books': return 'books_count';
+      case 'skills': return 'skills_count';
+      default: return null;
+    }
+  };
+
   const handleStringArrayChange = (field: keyof ResumeData, value: string) => {
     const array = value.split(',').map(item => item.trim()).filter(Boolean);
-    
+    const countField = arrayFieldToCountField(field);
     const updatedData = {
       ...resumeData,
       [field]: array,
-      [`${field}Count` as keyof ResumeData]: array.length
+      ...(countField ? { [countField]: array.length } : {})
     };
-    
     setResumeData(updatedData);
-    
-    // Update JSON data
     setJsonData(JSON.stringify(updatedData, null, 2));
   };
+
   
   const handleNumberChange = (field: keyof ResumeData, value: string) => {
     const numValue = Number(value);

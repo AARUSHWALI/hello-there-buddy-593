@@ -13,7 +13,7 @@ export interface UserProfile {
   about?: string;
   profileImage?: string;
   personalityScores?: {
-    extroversion: number;
+    extraversion: number;
     agreeableness: number;
     openness: number;
     neuroticism: number;
@@ -41,7 +41,7 @@ export function useUsers() {
           education: "Ph.D. in Computer Science",
           about: "Experienced educator with a focus on AI and machine learning",
           personalityScores: {
-            extroversion: 76,
+            extraversion: 76,
             agreeableness: 84,
             openness: 69,
             neuroticism: 50,
@@ -58,7 +58,7 @@ export function useUsers() {
           education: "Master of Computer Science",
           about: "Self-experienced Front End Developer with a strong background in software and web development",
           personalityScores: {
-            extroversion: 68,
+            extraversion: 68,
             agreeableness: 72,
             openness: 85,
             neuroticism: 42,
@@ -75,7 +75,7 @@ export function useUsers() {
           education: "M.Tech in Software Engineering",
           about: "Software engineer with expertise in full-stack development.",
           personalityScores: {
-            extroversion: 45,
+            extraversion: 45,
             agreeableness: 60,
             openness: 55,
             neuroticism: 25,

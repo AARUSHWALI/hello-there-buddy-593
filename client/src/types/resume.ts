@@ -32,6 +32,8 @@ export interface ResumeData {
   projects_count: number;
   projects: string[];
   best_fit_for?: string; // Making this optional and adding it to the interface
+  profile_score?: number;
+  fitment_score?: number;
 }
 
 export interface Education {

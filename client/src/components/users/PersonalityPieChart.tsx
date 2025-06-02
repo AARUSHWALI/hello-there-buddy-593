@@ -3,7 +3,7 @@ import React from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 interface PersonalityScores {
-  extroversion: number;
+  extraversion: number;
   agreeableness: number;
   openness: number;
   neuroticism: number;
@@ -16,7 +16,7 @@ interface PersonalityPieChartProps {
 
 export default function PersonalityPieChart({ scores }: PersonalityPieChartProps) {
   const data = [
-    { name: "Extroversion", value: scores.extroversion, color: "#8B5CF6" }, // Purple
+    { name: "Extroversion", value: scores.extraversion, color: "#8B5CF6" }, // Purple
     { name: "Agreeableness", value: scores.agreeableness, color: "#10B981" }, // Green
     { name: "Openness", value: scores.openness, color: "#3B82F6" }, // Blue
     { name: "Neuroticism", value: scores.neuroticism, color: "#F59E0B" }, // Amber

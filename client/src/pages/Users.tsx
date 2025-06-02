@@ -58,7 +58,7 @@ export interface UserProfile {
   fitment_score?: number;
   skills?: string[];
   personalityScores?: {
-    extroversion: number;
+    extraversion: number;
     agreeableness: number;
     openness: number;
     neuroticism: number;
@@ -112,7 +112,7 @@ const mapResumeToUserProfile = (resume: any): UserProfile => {
     about: resume.summary || 'No summary available',
     profileImage: '',
     personalityScores: {
-      extroversion: resume.extroversion || 0,
+      extraversion: resume.extraversion || 0,
       agreeableness: resume.agreeableness || 0,
       openness: resume.openness || 0,
       neuroticism: resume.neuroticism || 0,

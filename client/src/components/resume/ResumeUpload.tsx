@@ -33,7 +33,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
     e.preventDefault();
     e.stopPropagation();
     setDragging(false);
-    
+
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const droppedFile = e.dataTransfer.files[0];
       validateAndSetFile(droppedFile);
@@ -48,27 +48,27 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
 
   const validateAndSetFile = (uploadedFile: File) => {
     setError(null);
-    
+
     // Check file type
     const validTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
     if (!validTypes.includes(uploadedFile.type)) {
       setError("Please upload a valid PDF or Word document");
       return;
     }
-    
+
     // Check file size (10MB max)
     if (uploadedFile.size > 10 * 1024 * 1024) {
       setError("File size exceeds 10MB limit");
       return;
     }
-    
+
     setFile(uploadedFile);
   };
 
   const getFileIcon = () => {
     if (!file) return <Upload size={40} />;
-    
-    switch(file.type) {
+
+    switch (file.type) {
       case "application/pdf":
         return <FileText size={40} className="text-red-500" />;
       case "application/msword":
@@ -84,30 +84,30 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
     // Check for mailto: links first
     const mailtoRegex = /mailto:([^"'?]+)/i;
     const mailtoMatch = text.match(mailtoRegex);
-    
+
     if (mailtoMatch && mailtoMatch[1]) {
       return mailtoMatch[1];
     }
-    
+
     // Regular expression for matching email addresses
     const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
     const matches = text.match(emailRegex);
-    
+
     if (matches && matches.length > 0) {
       return matches[0];
     }
-    
+
     return null;
   };
 
   const parseResume = async () => {
     if (!file) return;
-    
+
     try {
       setUploading(true);
       onParsingStateChange(true);
       setError(null);
-      
+
       // Start progress indication
       const interval = setInterval(() => {
         setProgress(prev => {
@@ -121,18 +121,18 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
 
       // Convert file to base64 for sending to Gemini API
       const fileBase64 = await readFileAsBase64(file);
-      
+
       // Debug: Log the environment variables
       console.log('Environment variables:', import.meta.env);
       console.log('GEMINI_API_KEY exists:', 'VITE_GEMINI_API_KEY' in import.meta.env);
-      
+
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!apiKey) {
         throw new Error('GEMINI_API_KEY is not set in environment variables');
       }
-      
+
       const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-      
+
       // Craft a prompt that will work well for resume parsing
       const prompt = `
         Extract structured information from the following resume and return it in JSON format.
@@ -167,12 +167,28 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
         - Projects_No: number
         - Projects: array of strings
         - Best_Fit_For: string (suggest a job role suitable for the candidate)
+        - Profile_Score: number (calculate based on the following criteria: 
+- pg_institute: 0.1 (1 if true, else 0)
+- phd_institute: 0.2 (1 if true, else 0)
+- longevity_years: 0.1 (max 5 years → normalized as min(value / 5, 1))
+- achievements_count: 0.05 (max 15 → normalized as min(value / 15, 1))
+- trainings_count: 0.05 (max 10 → normalized as min(value / 10, 1))
+- workshops_count: 0.05 (max 10 → normalized as min(value / 10, 1))
+- research_papers_count: 0.2 (max 10 → normalized as min(value / 10, 1))
+- patents_count: 0.1 (max 5 → normalized as min(value / 5, 1))
+- books_count: 0.05 (max 5 → normalized as min(value / 5, 1))
+- is_jk: 0.1 (1 if true, else 0) * 100
+}
+        ) 
+        - Fitment_Score: number (Profile_score)
+        
+        
         
         For locations, check if it mentions Jammu, Kashmir, or J&K and set State_JK to 1 if it does.
         
         Return only the JSON with no additional explanation or markdown formatting.
       `;
-      
+
       try {
         // Make the actual API call to Gemini
         const response = await fetch(geminiEndpoint, {
@@ -199,14 +215,14 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
         });
 
         const data = await response.json();
-        
+
         if (data.error) {
           throw new Error(data.error.message || "Failed to parse resume");
         }
-        
+
         // Extract JSON from the response
         const parsedContent = data.candidates[0].content.parts[0].text;
-        
+
         // Try multiple regex patterns to extract the JSON
         const jsonMatches = [
           // Match JSON enclosed in code blocks
@@ -216,7 +232,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           // Fallback to the whole response
           { 1: parsedContent }
         ];
-        
+
         // Find the first successful match
         let jsonText = null;
         for (const match of jsonMatches) {
@@ -225,17 +241,17 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
             break;
           }
         }
-        
+
         if (!jsonText) {
           throw new Error("Could not extract JSON from the response");
         }
-        
+
         // Parse the JSON
         let parsedResumeData;
         try {
           parsedResumeData = JSON.parse(jsonText);
           console.log("Parsed resume data:", parsedResumeData);
-        
+
           // Map received data to match ResumeData interface
           const mappedData: ResumeData = {
             personalInfo: parsedResumeData.personalInfo || {
@@ -270,9 +286,11 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
             is_jk: parsedResumeData.State_JK || 0,
             projects_count: parsedResumeData.Projects_No || 0,
             projects: parsedResumeData.Projects || [],
-            best_fit_for: parsedResumeData.Best_Fit_For || ""
+            best_fit_for: parsedResumeData.Best_Fit_For || "",
+            profile_score: parsedResumeData.Profile_Score || 0,
+            fitment_score: parsedResumeData.Fitment_Score || 0
           };
-          
+
           // Ensure we have an email - try to extract from raw content if not found
           if (!mappedData.personalInfo.email || mappedData.personalInfo.email.trim() === "") {
             const extractedEmail = extractEmailFromText(parsedContent);
@@ -291,9 +309,9 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
             status: 'processed',
             created_at: new Date().toISOString(),
           };
-          
+
           console.log('Resume data processed:', resumeData);
-          
+
           // Handle personality test invite if email is available
           if (mappedData.personalInfo?.email) {
             console.log('Would send personality test invite to:', mappedData.personalInfo.email);
@@ -303,7 +321,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           // Clear progress interval and set to 100%
           clearInterval(interval);
           setProgress(100);
-          
+
           // Notify user and return data
           setTimeout(() => {
             // Implement your own toast notification here
@@ -353,7 +371,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
     try {
       // First try to use the email from the parsed data
       let candidateEmail = parsedResumeData.personalInfo.email;
-      
+
       // If no email was found, try to extract from other fields
       if (!candidateEmail) {
         // Try from summary
@@ -361,7 +379,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           const extractedEmail = extractEmailFromText(parsedResumeData.personalInfo.summary);
           if (extractedEmail) candidateEmail = extractedEmail;
         }
-        
+
         // If still no email, try from other text fields
         if (!candidateEmail) {
           const allText = JSON.stringify(parsedResumeData);
@@ -369,16 +387,16 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           if (extractedEmail) candidateEmail = extractedEmail;
         }
       }
-      
+
       if (!candidateEmail) {
         console.error("No email could be extracted from the resume");
         return;
       }
-      
+
       // Fetch resume data from your preferred storage
       // Replace this with your own data fetching logic
       console.log('Would fetch resume data for user:', 'your_user_id');
-      
+
       // Mock data for demonstration
       const data = {
         parsed_data: {
@@ -388,11 +406,11 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           }
         }
       };
-      
+
       if (!data?.parsed_data) {
         throw new Error('No resume data found');
       }
-      
+
       // Handle personality test invite
       console.log('Would send personality test invite to:', data.parsed_data.personalInfo?.email);
       // Implement your own invitation logic here
@@ -403,7 +421,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
 
   return (
     <div className="flex flex-col items-center">
-      <div 
+      <div
         className={`border-2 border-dashed rounded-lg p-10 w-full text-center cursor-pointer transition-colors
           ${dragging ? 'bg-purple-50 border-purple-400' : 'bg-gray-50 border-gray-300'}`}
         onDragOver={handleDragOver}
@@ -422,7 +440,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           <div className="w-16 h-16 flex items-center justify-center bg-purple-50 rounded-full">
             {getFileIcon()}
           </div>
-          
+
           <div>
             {!file && (
               <>
@@ -430,7 +448,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
                 <p className="text-sm text-gray-500">Supports PDF, DOC, DOCX (Max 10MB)</p>
               </>
             )}
-            
+
             {file && (
               <div className="mt-2">
                 <p className="text-lg font-medium">{file.name}</p>
@@ -440,7 +458,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           </div>
         </div>
       </div>
-      
+
       {error && (
         <Alert variant="destructive" className="mt-4 w-full">
           <AlertCircle className="h-4 w-4" />
@@ -448,16 +466,16 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       {file && !uploading && (
         <div className="mt-6 flex gap-4">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => { setFile(null); setError(null); }}
           >
             Choose Different File
           </Button>
-          <Button 
+          <Button
             onClick={parseResume}
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
@@ -465,7 +483,7 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
           </Button>
         </div>
       )}
-      
+
       {uploading && (
         <div className="mt-6 w-full">
           <div className="flex justify-between mb-2">

@@ -133,10 +133,10 @@ export default function PersonalityTest() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <Label>Extroversion</Label>
-                    <span className="text-sm">{scores.extroversion}%</span>
+                    <span className="text-sm">{scores.extraversion}%</span>
                   </div>
                   <Slider 
-                    value={[scores.extroversion]} 
+                    value={[scores.extraversion]} 
                     onValueChange={(value) => handleScoreChange('extroversion', value)} 
                     max={100} 
                     step={1}

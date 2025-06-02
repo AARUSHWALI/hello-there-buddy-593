@@ -109,7 +109,7 @@ export default function UserDetailsDialog({ isOpen, onClose, user }: UserDetails
                   <div className="mt-6 space-y-2 max-w-md mx-auto">
                     <div className="flex justify-between text-sm">
                       <span>Extroversion</span>
-                      <span>{user.personalityScores.extroversion}%</span>
+                      <span>{user.personalityScores.extraversion}%</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span>Agreeableness</span>
