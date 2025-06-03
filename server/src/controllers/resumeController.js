@@ -133,7 +133,7 @@ export const getResumes = async (req, res) => {
     // Transform the data to include full file URLs
     const resumesWithUrls = resumes.map(resume => ({
       ...resume,
-      file_url: resume.file_path ? `${apiBaseUrl}/api/resumes/${resume.id}/file` : null
+      file_url: resume.file_path ? `${apiBaseUrl}/resumes/${resume.id}/file` : null
     }));
     
     res.json({
@@ -194,7 +194,7 @@ export const getResumeById = async (req, res) => {
     const apiBaseUrl = req.app.locals.API_BASE_URL || 'http://localhost:5000';
     
     // Add full file URL
-    data.file_url = data.file_path ? `${apiBaseUrl}/api/resumes/${data.id}/file` : null;
+    data.file_url = data.file_path ? `${apiBaseUrl}/resumes/${data.id}/file` : null;
 
     res.json({ success: true, data });
   } catch (error) {
@@ -318,7 +318,7 @@ export const createResume = async (req, res) => {
     const responseData = {
       ...insertedData[0],
       file_url: insertedData[0].file_path 
-        ? `${apiBaseUrl}/api/resumes/${insertedData[0].id}/file` 
+        ? `${apiBaseUrl}/resumes/${insertedData[0].id}/file` 
         : null
     };
     
@@ -402,5 +402,66 @@ export const deleteResume = async (req, res) => {
   } catch (error) {
     console.error('Error deleting resume:', error);
     res.status(500).json({ error: 'Failed to delete resume' });
+  }
+};
+
+// Get resume file by ID
+export const getResumeFile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`Getting file for resume ID: ${id}`);
+    
+    // Get resume data from database
+    const { data, error } = await supabase
+      .from('resumes')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    if (!data) {
+      return res.status(404).json({ success: false, error: 'Resume not found' });
+    }
+
+    // Check if file path exists
+    if (!data.file_path) {
+      return res.status(404).json({ success: false, error: 'No file associated with this resume' });
+    }
+
+    console.log(`File path in database: ${data.file_path}`);
+
+    // Download the file from Supabase Storage
+    const { data: fileData, error: downloadError } = await supabase.storage
+      .from('resume')
+      .download(data.file_path);
+
+    if (downloadError) {
+      console.error('Error downloading file from Supabase:', downloadError);
+      return res.status(404).json({ success: false, error: 'File not found in storage' });
+    }
+
+    if (!fileData) {
+      return res.status(404).json({ success: false, error: 'File data is empty' });
+    }
+
+    // Get file extension and set content type
+    const ext = path.extname(data.file_path).toLowerCase();
+    let contentType = 'application/octet-stream';
+    
+    if (ext === '.pdf') contentType = 'application/pdf';
+    else if (ext === '.doc') contentType = 'application/msword';
+    else if (ext === '.docx') contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    else if (ext === '.txt') contentType = 'text/plain';
+
+    // Set headers
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(data.file_path)}"`);
+
+    // Convert Blob to Buffer and send the response
+    const buffer = await fileData.arrayBuffer();
+    res.send(Buffer.from(buffer));
+  } catch (error) {
+    console.error('Error getting resume file:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 };

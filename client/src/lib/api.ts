@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Use production API URL in production environment, otherwise use development URL
+const API_BASE_URL = import.meta.env.PROD 
+  ? import.meta.env.VITE_PROD_API_BASE_URL 
+  : import.meta.env.VITE_DEV_API_BASE_URL || 'http://localhost:5000/api';
 
 export interface FitmentCriteria {
   id: string;

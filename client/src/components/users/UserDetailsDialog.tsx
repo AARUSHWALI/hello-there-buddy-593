@@ -131,10 +131,15 @@ export default function UserDetailsDialog({ isOpen, onClose, user }: UserDetails
                     <Button 
                       onClick={() => {
                         if (user.file_url) {
-                          // Ensure the URL is absolute
-                          const resumeUrl = user.file_url.startsWith('http') 
-                            ? user.file_url 
-                            : `${window.location.origin}${user.file_url.startsWith('/') ? '' : '/'}${user.file_url}`;
+                          // Fix the URL to prevent duplicate 'api' in the path
+                          let resumeUrl;
+                          if (user.file_url.startsWith('http')) {
+                            // If it's already a full URL, check for duplicate 'api'
+                            resumeUrl = user.file_url.replace('/api/api/', '/api/');
+                          } else {
+                            // For relative URLs, ensure proper formatting
+                            resumeUrl = `${window.location.origin}${user.file_url.startsWith('/') ? '' : '/'}${user.file_url}`;
+                          }
                           window.open(resumeUrl, '_blank', 'noopener,noreferrer');
                         } else {
                           toast({

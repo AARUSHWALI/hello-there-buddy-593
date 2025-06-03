@@ -8,7 +8,8 @@ import {
   createResume, 
   updateResume, 
   deleteResume, 
-  searchResumes 
+  searchResumes,
+  getResumeFile 
 } from '../controllers/resumeController.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -99,6 +100,9 @@ router.put('/:id', updateResume);
 
 // DELETE /api/resumes/:id - Delete a resume
 router.delete('/:id', deleteResume);
+
+// GET /api/resumes/:id/file - Get the resume file for download
+router.get('/:id/file', getResumeFile);
 
 // Legacy route for backward compatibility
 router.post('/upload', upload.single('file'), createResume);
