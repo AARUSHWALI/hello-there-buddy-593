@@ -6,7 +6,6 @@ import { fileURLToPath } from 'url';
 import interviewRoutes from './routes/interviews.js';
 import resumeRoutes from './routes/resumes.js';
 import criteriaRoutes from './routes/criteria.js';
-import authRoutes from './routes/auth.js';
 
 // Load environment variables
 dotenv.config();
@@ -84,7 +83,6 @@ app.use((req, res, next) => {
 app.locals.API_BASE_URL = process.env.API_BASE_URL || `http://localhost:${PORT}`;
 
 // API Routes
-app.use('/api/auth', authRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/resumes', resumeRoutes);
 app.use('/api/criteria', criteriaRoutes);
