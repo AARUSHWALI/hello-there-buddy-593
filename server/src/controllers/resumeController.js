@@ -24,28 +24,8 @@ const uploadFileToStorage = async (file) => {
       destinationPath: filePath
     });
 
-    // Ensure the bucket exists
-    console.log('Checking if bucket exists...');
-    const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
-    if (bucketsError) {
-      console.error('Error listing buckets:', bucketsError);
-      throw new Error(`Failed to list storage buckets: ${bucketsError.message}`);
-    }
-
-    const bucketExists = buckets.some(bucket => bucket.name === 'resume');
-    if (!bucketExists) {
-      console.log('Bucket does not exist, creating...');
-      const { error: createBucketError } = await supabase.storage
-        .createBucket('resume', { public: false });
-      
-      if (createBucketError) {
-        console.error('Error creating bucket:', createBucketError);
-        throw new Error(`Failed to create storage bucket: ${createBucketError.message}`);
-      }
-      console.log('Bucket created successfully');
-    } else {
-      console.log('Bucket already exists');
-    }
+    // Note: Bucket 'resume' should be created manually in Supabase dashboard
+    console.log('Assuming bucket "resume" exists (create it manually in Supabase dashboard if not)');
 
     // Read the file as a buffer
     console.log('Reading file from disk...');
@@ -67,6 +47,15 @@ const uploadFileToStorage = async (file) => {
 
     if (uploadError) {
       console.error('Error uploading file to Supabase:', uploadError);
+      
+      // Provide specific error messages for common issues
+      if (uploadError.message.includes('Bucket not found')) {
+        throw new Error('Storage bucket "resume" not found. Please create it in your Supabase dashboard under Storage.');
+      }
+      if (uploadError.message.includes('row-level security policy')) {
+        throw new Error('Storage permissions error. Please check your Supabase RLS policies or use a service role key instead of anon key.');
+      }
+      
       throw new Error(`File upload failed: ${uploadError.message}`);
     }
 
