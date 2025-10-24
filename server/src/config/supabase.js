@@ -20,7 +20,7 @@ import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
 
 // ✅ Explicitly load .env file — adjust path if running from project root
-dotenv.config({ path: './server/.env' })
+dotenv.config()
 
 // Debug logs to confirm environment variables are loaded
 console.log("🔍 Supabase URL:", process.env.SUPABASE_URL || '❌ Not found')
