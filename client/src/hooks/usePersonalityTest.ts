@@ -1,8 +1,7 @@
-
 import { useState } from 'react';
-// Import your own storage/API client here
 import { useToast } from '@/components/ui/use-toast';
 import { toast as sonnerToast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 export type PersonalityScores = {
   extraversion: number;
@@ -62,11 +61,25 @@ export function usePersonalityTest() {
         results.fitmentScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
       }
 
-      // Replace this with your own submission logic
-      console.log('Would submit test results:', results);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Submit to Supabase via edge function
+      const { data, error } = await supabase.functions.invoke('save-big5-results', {
+        body: {
+          candidateEmail: results.email,
+          resumeId: results.token,
+          extraversion: results.personalityScores.extraversion,
+          agreeableness: results.personalityScores.agreeableness,
+          openness: results.personalityScores.openness,
+          neuroticism: results.personalityScores.neuroticism,
+          conscientiousness: results.personalityScores.conscientiousness,
+        }
+      });
+
+      if (error) {
+        console.error('Error submitting test results:', error);
+        throw error;
+      }
+
+      console.log('Test results submitted successfully:', data);
 
       // Show success message
       toast({
@@ -74,7 +87,6 @@ export function usePersonalityTest() {
         description: "Your personality test results have been recorded.",
       });
       
-      // Also show a toast message using sonner
       sonnerToast.success("Test submitted successfully");
       
       return true;
@@ -98,10 +110,6 @@ export function usePersonalityTest() {
     try {
       setIsSending(true);
       
-      // Determine the appropriate test URL based on current environment
-      const baseUrl = window.location.origin; 
-      const personalityTestUrl = `${baseUrl}/personality-test`;
-      
       // If emailText is provided, try to extract email from it
       let candidateEmail = email;
       if (emailText && !email) {
@@ -117,11 +125,20 @@ export function usePersonalityTest() {
         throw new Error("No valid email provided");
       }
       
-      // Replace this with your own invitation logic
-      console.log('Would send personality test invite to:', candidateEmail, 'with name:', name);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Send invitation via edge function
+      const { data, error } = await supabase.functions.invoke('send-big5-invite', {
+        body: {
+          candidateEmail,
+          candidateName: name,
+        }
+      });
+
+      if (error) {
+        console.error('Error sending test invitation:', error);
+        throw error;
+      }
+
+      console.log('Test invitation sent successfully:', data);
 
       // Show success message
       toast({

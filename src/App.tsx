@@ -11,7 +11,7 @@ import Jobs from "./pages/Jobs";
 import Interview from "./pages/Interview";
 import Resume from "./pages/Resume";
 import NotFound from "./pages/NotFound";
-import PersonalityTest from "./components/PersonalityTest";
+import PersonalityTest from "./pages/PersonalityTest";
 import Settings from "./pages/Settings";
 // import RecentActivity from "./components/dashboard/RecentActivity";
 // import CandidateStatus from "./components/dashboard/CandidateStatus";
