@@ -359,7 +359,11 @@ export const createResume = async (req, res) => {
     
     // Send Big 5 test invitation email if email is present
     if (upsertedData[0].email && upsertedData[0].name) {
-      console.log('Sending Big 5 test invitation to:', upsertedData[0].email);
+      console.log('✉️ Attempting to send Big 5 test invitation...');
+      console.log('Candidate Email:', upsertedData[0].email);
+      console.log('Candidate Name:', upsertedData[0].name);
+      console.log('Resume ID:', upsertedData[0].id);
+      
       try {
         const { data: emailData, error: emailError } = await supabase.functions.invoke('send-big5-invite', {
           body: {
@@ -370,15 +374,22 @@ export const createResume = async (req, res) => {
         });
 
         if (emailError) {
-          console.error('Failed to send Big 5 test invitation:', emailError);
+          console.error('❌ Failed to send Big 5 test invitation:', emailError);
+          console.error('Error details:', JSON.stringify(emailError, null, 2));
           // Don't fail the resume creation if email fails
         } else {
-          console.log('Big 5 test invitation sent successfully:', emailData);
+          console.log('✅ Big 5 test invitation sent successfully!');
+          console.log('Email response:', JSON.stringify(emailData, null, 2));
         }
       } catch (emailError) {
-        console.error('Error invoking send-big5-invite function:', emailError);
+        console.error('❌ Exception while invoking send-big5-invite function:', emailError);
+        console.error('Exception stack:', emailError.stack);
         // Don't fail the resume creation if email fails
       }
+    } else {
+      console.log('⚠️ Skipping Big 5 invitation - missing email or name');
+      console.log('Email present:', !!upsertedData[0].email);
+      console.log('Name present:', !!upsertedData[0].name);
     }
     
     res.status(201).json({
