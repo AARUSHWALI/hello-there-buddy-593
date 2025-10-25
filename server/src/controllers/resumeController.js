@@ -344,24 +344,48 @@ export const createResume = async (req, res) => {
       throw new Error('No data returned from database after operation');
     }
 
-    console.log('Resume saved successfully:', JSON.stringify(upsertedData[0], null, 2));
-    
-    // Get API base URL from app.locals
-    const apiBaseUrl = req.app.locals.API_BASE_URL || 'http://localhost:5000';
-    
-    // Add file URL to the response
-    const responseData = {
-      ...upsertedData[0],
-      file_url: upsertedData[0].file_path 
-        ? `${apiBaseUrl}/resumes/${upsertedData[0].id}/file` 
-        : null
-    };
-    
-    res.status(201).json({
-      success: true,
-      message: 'Resume saved successfully',
-      data: responseData
-    });
+    console.log('Resume saved successfully:', JSON.stringify(upsertedData[0], null, 2));
+    
+    // Get API base URL from app.locals
+    const apiBaseUrl = req.app.locals.API_BASE_URL || 'http://localhost:5000';
+    
+    // Add file URL to the response
+    const responseData = {
+      ...upsertedData[0],
+      file_url: upsertedData[0].file_path 
+        ? `${apiBaseUrl}/resumes/${upsertedData[0].id}/file` 
+        : null
+    };
+    
+    // Send Big 5 test invitation email if email is present
+    if (upsertedData[0].email && upsertedData[0].name) {
+      console.log('Sending Big 5 test invitation to:', upsertedData[0].email);
+      try {
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-big5-invite', {
+          body: {
+            candidateEmail: upsertedData[0].email,
+            candidateName: upsertedData[0].name,
+            resumeId: upsertedData[0].id,
+          }
+        });
+
+        if (emailError) {
+          console.error('Failed to send Big 5 test invitation:', emailError);
+          // Don't fail the resume creation if email fails
+        } else {
+          console.log('Big 5 test invitation sent successfully:', emailData);
+        }
+      } catch (emailError) {
+        console.error('Error invoking send-big5-invite function:', emailError);
+        // Don't fail the resume creation if email fails
+      }
+    }
+    
+    res.status(201).json({
+      success: true,
+      message: 'Resume saved successfully',
+      data: responseData
+    });
   } catch (error) {
     console.error('Unexpected error in createResume/updateResume:', {
       error: error.message,

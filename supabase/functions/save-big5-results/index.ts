@@ -51,14 +51,33 @@ const handler = async (req: Request): Promise<Response> => {
       results.conscientiousness
     ) / 5;
 
-    console.log('Saving Big5 results for:', results.candidateEmail);
+    console.log('Saving Big5 results for:', results.candidateEmail, 'with resumeId:', results.resumeId);
+
+    // First, try to find the resume by email if resumeId is not provided
+    let finalResumeId = results.resumeId;
+    
+    if (!finalResumeId && results.candidateEmail) {
+      console.log('No resumeId provided, looking up resume by email:', results.candidateEmail);
+      const { data: resumeData, error: resumeError } = await supabase
+        .from('resumes')
+        .select('id')
+        .eq('email', results.candidateEmail)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (resumeData && !resumeError) {
+        finalResumeId = resumeData.id;
+        console.log('Found resume by email, using resumeId:', finalResumeId);
+      }
+    }
 
     // Insert the results into the big5_scores table
     const { data, error } = await supabase
       .from('big5_scores')
       .insert({
         candidate_email: results.candidateEmail,
-        resume_id: results.resumeId || null,
+        resume_id: finalResumeId || null,
         extraversion: results.extraversion,
         agreeableness: results.agreeableness,
         openness: results.openness,
