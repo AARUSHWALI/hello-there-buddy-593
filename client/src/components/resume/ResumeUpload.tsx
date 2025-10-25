@@ -336,16 +336,20 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
         }
       } catch (error) {
         clearInterval(interval);
-        setError("Failed to process resume. Please try again.");
+        const errorMessage = error instanceof Error ? error.message : "Failed to process resume. Please try again.";
+        console.error("❌ Error parsing resume with Gemini API:", error);
+        console.error("Error details:", errorMessage);
+        setError(errorMessage);
         setUploading(false);
         onParsingStateChange(false);
-        console.error("Error parsing resume:", error);
       }
     } catch (error) {
-      setError("Failed to process resume. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to process resume. Please try again.";
+      console.error("❌ Error in parseResume function:", error);
+      console.error("Error details:", errorMessage);
+      setError(errorMessage);
       setUploading(false);
       onParsingStateChange(false);
-      console.error("Error parsing resume:", error);
     }
   };
 
