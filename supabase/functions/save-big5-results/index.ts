@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface Big5Results {
   candidateEmail: string;
+  candidateName?: string;
   resumeId?: string;
   extraversion: number;
   agreeableness: number;
@@ -42,8 +43,8 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Calculate total score (average of all traits)
-    const totalScore = (
+    // Calculate fitment score (average of all traits, with neuroticism inverted)
+    const fitmentScore = (
       results.extraversion +
       results.agreeableness +
       results.openness +
@@ -51,55 +52,85 @@ const handler = async (req: Request): Promise<Response> => {
       results.conscientiousness
     ) / 5;
 
-    console.log('Saving Big5 results for:', results.candidateEmail, 'with resumeId:', results.resumeId);
+    console.log('Saving Big5 results for:', results.candidateEmail);
+    console.log('Personality scores:', {
+      extraversion: results.extraversion,
+      agreeableness: results.agreeableness,
+      openness: results.openness,
+      neuroticism: results.neuroticism,
+      conscientiousness: results.conscientiousness,
+      fitmentScore
+    });
 
-    // First, try to find the resume by email if resumeId is not provided
-    let finalResumeId = results.resumeId;
-    
-    if (!finalResumeId && results.candidateEmail) {
-      console.log('No resumeId provided, looking up resume by email:', results.candidateEmail);
-      const { data: resumeData, error: resumeError } = await supabase
-        .from('resumes')
-        .select('id')
-        .eq('email', results.candidateEmail)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (resumeData && !resumeError) {
-        finalResumeId = resumeData.id;
-        console.log('Found resume by email, using resumeId:', finalResumeId);
+    // Try to find existing candidate by email
+    const { data: existingCandidate, error: findError } = await supabase
+      .from('candidates')
+      .select('id')
+      .eq('email', results.candidateEmail)
+      .maybeSingle();
+
+    if (findError) {
+      console.error('Error finding candidate:', findError);
+    }
+
+    let savedData;
+
+    if (existingCandidate) {
+      // Update existing candidate with Big5 scores
+      console.log('Updating existing candidate:', existingCandidate.id);
+      const { data: updateData, error: updateError } = await supabase
+        .from('candidates')
+        .update({
+          extraversion: results.extraversion,
+          agreeableness: results.agreeableness,
+          openness: results.openness,
+          neuroticism: results.neuroticism,
+          conscientiousness: results.conscientiousness,
+          fitment_score: fitmentScore,
+        })
+        .eq('id', existingCandidate.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Error updating candidate with Big5 results:", updateError);
+        throw updateError;
       }
+
+      savedData = updateData;
+      console.log("Big5 results updated successfully for existing candidate");
+    } else {
+      // Create new candidate with Big5 scores
+      console.log('Creating new candidate for:', results.candidateEmail);
+      const { data: insertData, error: insertError } = await supabase
+        .from('candidates')
+        .insert({
+          name: results.candidateName || results.candidateEmail.split('@')[0],
+          email: results.candidateEmail,
+          extraversion: results.extraversion,
+          agreeableness: results.agreeableness,
+          openness: results.openness,
+          neuroticism: results.neuroticism,
+          conscientiousness: results.conscientiousness,
+          fitment_score: fitmentScore,
+          status: 'pending',
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error("Error creating candidate with Big5 results:", insertError);
+        throw insertError;
+      }
+
+      savedData = insertData;
+      console.log("New candidate created successfully with Big5 results");
     }
-
-    // Insert the results into the big5_scores table
-    const { data, error } = await supabase
-      .from('big5_scores')
-      .insert({
-        candidate_email: results.candidateEmail,
-        resume_id: finalResumeId || null,
-        extraversion: results.extraversion,
-        agreeableness: results.agreeableness,
-        openness: results.openness,
-        neuroticism: results.neuroticism,
-        conscientiousness: results.conscientiousness,
-        total_score: totalScore,
-        completed_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error saving Big5 results:", error);
-      throw error;
-    }
-
-    console.log("Big5 results saved successfully:", data);
 
     return new Response(JSON.stringify({ 
       success: true,
-      message: "Results saved successfully",
-      data: data
+      message: existingCandidate ? "Results updated successfully" : "Results saved successfully",
+      data: savedData
     }), {
       status: 200,
       headers: {
