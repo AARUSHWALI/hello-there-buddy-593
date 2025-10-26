@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ResumeData } from "@/types/resume";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ResumeUploadProps {
   onResumeUploaded: (data: ResumeData, file: File) => void;
@@ -119,19 +120,10 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
         });
       }, 300);
 
-      // Convert file to base64 for sending to Gemini API
+      // Convert file to base64 for sending to edge function
       const fileBase64 = await readFileAsBase64(file);
 
-      // Debug: Log the environment variables
-      console.log('Environment variables:', import.meta.env);
-      console.log('GEMINI_API_KEY exists:', 'VITE_GEMINI_API_KEY' in import.meta.env);
-
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error('GEMINI_API_KEY is not set in environment variables');
-      }
-
-      const geminiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
+      console.log('Calling parse-resume edge function...');
 
       // Craft a prompt that will work well for resume parsing
       const prompt = `
@@ -190,71 +182,36 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
       `;
 
       try {
-        // Make the actual API call to Gemini
-        const response = await fetch(geminiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: prompt },
-                  { inlineData: { mimeType: file.type, data: fileBase64 } }
-                ]
-              }
-            ],
-            generationConfig: {
-              temperature: 0.1,
-              maxOutputTokens: 4096,
-              topP: 0.95,
-              topK: 40
-            }
-          })
+        // Call the parse-resume edge function
+        const response = await supabase.functions.invoke('parse-resume', {
+          body: {
+            fileBase64,
+            mimeType: file.type
+          }
         });
 
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error.message || "Failed to parse resume");
+        if (response.error) {
+          throw new Error(response.error.message || "Failed to parse resume");
         }
 
-        // Extract JSON from the response
-        const parsedContent = data.candidates[0].content.parts[0].text;
-
-        // Try multiple regex patterns to extract the JSON
-        const jsonMatches = [
-          // Match JSON enclosed in code blocks
-          parsedContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/),
-          // Match JSON enclosed in brackets
-          parsedContent.match(/(\{[\s\S]*\})/),
-          // Fallback to the whole response
-          { 1: parsedContent }
-        ];
-
-        // Find the first successful match
-        let jsonText = null;
-        for (const match of jsonMatches) {
-          if (match && match[1]) {
-            jsonText = match[1].trim();
-            break;
-          }
+        const { data: responseData } = response;
+        
+        if (!responseData || !responseData.success) {
+          throw new Error(responseData?.error || "Failed to parse resume");
         }
 
-        if (!jsonText) {
-          throw new Error("Could not extract JSON from the response");
-        }
-
-        // Parse the JSON
-        let parsedResumeData;
-        try {
-          parsedResumeData = JSON.parse(jsonText);
-          console.log("Parsed resume data:", parsedResumeData);
+        const parsedResumeData = responseData.data;
+        console.log("Parsed resume data:", parsedResumeData);
 
           // Map received data to match ResumeData interface
           const mappedData: ResumeData = {
-            personalInfo: parsedResumeData.personalInfo || {
+            personalInfo: parsedResumeData.personalInfo || parsedResumeData.name ? {
+              name: parsedResumeData.name || "",
+              email: parsedResumeData.email || "",
+              phone: parsedResumeData.phone || "",
+              address: parsedResumeData.address || "",
+              summary: parsedResumeData.summary || ""
+            } : {
               name: "",
               email: "",
               phone: "",
@@ -288,35 +245,10 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
             projects: parsedResumeData.Projects || [],
             best_fit_for: parsedResumeData.Best_Fit_For || "",
             profile_score: parsedResumeData.Profile_Score || 0,
-            fitment_score: parsedResumeData.Fitment_Score || 0
+            fitment_score: parsedResumeData.Fitment_Score || parsedResumeData.Profile_Score || 0
           };
 
-          // Ensure we have an email - try to extract from raw content if not found
-          if (!mappedData.personalInfo.email || mappedData.personalInfo.email.trim() === "") {
-            const extractedEmail = extractEmailFromText(parsedContent);
-            if (extractedEmail) {
-              mappedData.personalInfo.email = extractedEmail;
-            }
-          }
-
-          // Store resume data in your preferred storage
-          const resumeData = {
-            user_id: 'your_user_id',
-            file_name: file.name,
-            file_type: file.type,
-            file_size: file.size,
-            parsed_data: mappedData,
-            status: 'processed',
-            created_at: new Date().toISOString(),
-          };
-
-          console.log('Resume data processed:', resumeData);
-
-          // Handle personality test invite if email is available
-          if (mappedData.personalInfo?.email) {
-            console.log('Would send personality test invite to:', mappedData.personalInfo.email);
-            // Implement your own invitation logic here
-          }
+          console.log('Resume data processed:', mappedData);
 
           // Clear progress interval and set to 100%
           clearInterval(interval);
@@ -324,16 +256,10 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
 
           // Notify user and return data
           setTimeout(() => {
-            // Implement your own toast notification here
             onResumeUploaded(mappedData, file);
             setUploading(false);
             onParsingStateChange(false);
           }, 500);
-        } catch (jsonError) {
-          console.error("Error parsing JSON:", jsonError);
-          console.error("Raw JSON text:", jsonText);
-          throw new Error("Invalid JSON response from API");
-        }
       } catch (error) {
         clearInterval(interval);
         setError("Failed to process resume. Please try again.");
