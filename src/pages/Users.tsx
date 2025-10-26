@@ -5,41 +5,14 @@ import { useLocation } from "react-router-dom";
 import UserDetailsDialog from "@/components/users/UserDetailsDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import axios from "axios";
 import { toast } from "@/components/ui/use-toast";
-import { getApiUrl } from "@/config/api.config";
+import { supabase } from "@/integrations/supabase/client";
 
-// API client with error handling
-const apiClient = {
-  get: async (endpoint: string) => {
-    try {
-      const response = await axios.get(getApiUrl(endpoint as any));
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching ${endpoint}:`, error);
-      throw error;
-    }
-  },
-  getCriteria: async () => {
-    try {
-      return await apiClient.get('criteria');
-    } catch (error) {
-      console.error('Error fetching criteria, using defaults:', error);
-      return {
-        best_fit: 80,
-        average_fit: 50,
-        not_fit: 0
-      };
-    }
-  },
-  getUsers: async () => {
-    return await apiClient.get('users');
-  }
-};
-
-// Alias for backward compatibility
-const criteriaApi = {
-  getCriteria: apiClient.getCriteria
+// Default fitment criteria
+const DEFAULT_CRITERIA = {
+  best_fit: 80,
+  average_fit: 50,
+  not_fit: 0
 };
 
 export interface UserProfile {
@@ -72,9 +45,7 @@ export interface UserProfile {
   file_url?: string;
 }
 
-const API_BASE_URL = 'http://localhost:5000/api';
-
-const mapResumeToUserProfile = (resume: any): UserProfile => {
+const mapCandidateToUserProfile = (candidate: any): UserProfile => {
   // Format education if it's an array
   const formatEducation = (edu: any[] | string | undefined): string => {
     if (!edu) return '';
@@ -102,32 +73,32 @@ const mapResumeToUserProfile = (resume: any): UserProfile => {
   };
 
   return {
-    id: resume.id || '',
-    name: resume.name || 'Unknown',
-    email: resume.email || '',
-    score: resume.fitment_score || 0,
-    jobRole: resume.best_fit_for || 'Not Specified',
-    experience: formatExperience(resume.longevity_years),
-    education: formatEducation(resume.education),
-    about: resume.summary || 'No summary available',
+    id: candidate.id || '',
+    name: candidate.name || 'Unknown',
+    email: candidate.email || '',
+    score: candidate.fitment_score || 0,
+    jobRole: candidate.best_fit_for || 'Not Specified',
+    experience: formatExperience(candidate.longevity_years),
+    education: formatEducation(candidate.education),
+    about: candidate.summary || 'No summary available',
     profileImage: '',
     personalityScores: {
-      extraversion: resume.extraversion || 0,
-      agreeableness: resume.agreeableness || 0,
-      openness: resume.openness || 0,
-      neuroticism: resume.neuroticism || 0,
-      conscientiousness: resume.conscientiousness || 0
+      extraversion: candidate.extraversion || 0,
+      agreeableness: candidate.agreeableness || 0,
+      openness: candidate.openness || 0,
+      neuroticism: candidate.neuroticism || 0,
+      conscientiousness: candidate.conscientiousness || 0
     },
-    status: resume.status || 'pending',
-    phone: resume.phone || '',
-    address: resume.address || '',
-    summary: resume.summary || '',
-    best_fit_for: resume.best_fit_for || '',
-    created_at: resume.created_at || new Date().toISOString(),
-    fitment_score: resume.fitment_score || 0,
-    skills: formatSkills(resume.skills),
-    candidate_type: resume.candidate_type,
-    file_url: resume.file_url,
+    status: candidate.status || 'pending',
+    phone: candidate.phone || '',
+    address: candidate.address || '',
+    summary: candidate.summary || '',
+    best_fit_for: candidate.best_fit_for || '',
+    created_at: candidate.created_at || new Date().toISOString(),
+    fitment_score: candidate.fitment_score || 0,
+    skills: formatSkills(candidate.skills),
+    candidate_type: candidate.candidate_type,
+    file_url: candidate.file_url,
   };
 };
 
@@ -160,22 +131,9 @@ export default function Users() {
   const [fitmentCriteria, setFitmentCriteria] = useState({ best_fit: 80, average_fit: 50, not_fit: 0 });
   const location = useLocation();
 
-  // Fetch fitment criteria
+  // Use default criteria for now
   useEffect(() => {
-    const fetchCriteria = async () => {
-      try {
-        const data = await apiClient.getCriteria();
-        setFitmentCriteria({
-          best_fit: data.best_fit || 80,
-          average_fit: data.average_fit || 50,
-          not_fit: data.not_fit || 0
-        });
-      } catch (error) {
-        console.error('Failed to fetch fitment criteria, using defaults', error);
-      }
-    };
-    
-    fetchCriteria();
+    setFitmentCriteria(DEFAULT_CRITERIA);
   }, []);
   
   // Determine fitment status based on score
@@ -191,20 +149,21 @@ export default function Users() {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiClient.getUsers();
+      const { data, error: fetchError } = await supabase
+        .from('candidates')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      if (response?.success && Array.isArray(response.data)) {
-        const userProfiles = response.data.map((resume: any) => mapResumeToUserProfile(resume));
-        setUsers(userProfiles);
-      } else {
-        throw new Error('Invalid response format from server');
-      }
-    } catch (err) {
+      if (fetchError) throw fetchError;
+      
+      const userProfiles = (data || []).map((candidate: any) => mapCandidateToUserProfile(candidate));
+      setUsers(userProfiles);
+    } catch (err: any) {
       console.error('Error in fetchUsers:', err);
-      setError('Failed to fetch users. Please make sure the backend server is running.');
+      setError('Failed to fetch candidates from database.');
       toast({
         title: "Error",
-        description: err.response?.data?.message || 'Failed to connect to the server',
+        description: err.message || 'Failed to load candidates',
         variant: "destructive",
       });
       setUsers([]);

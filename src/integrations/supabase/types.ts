@@ -14,7 +14,78 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      candidates: {
+        Row: {
+          address: string | null
+          agreeableness: number | null
+          best_fit_for: string | null
+          candidate_type: boolean | null
+          conscientiousness: number | null
+          created_at: string
+          education: Json | null
+          email: string
+          extraversion: number | null
+          file_url: string | null
+          fitment_score: number | null
+          id: string
+          longevity_years: number | null
+          name: string
+          neuroticism: number | null
+          openness: number | null
+          phone: string | null
+          skills: string[] | null
+          status: string | null
+          summary: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          agreeableness?: number | null
+          best_fit_for?: string | null
+          candidate_type?: boolean | null
+          conscientiousness?: number | null
+          created_at?: string
+          education?: Json | null
+          email: string
+          extraversion?: number | null
+          file_url?: string | null
+          fitment_score?: number | null
+          id?: string
+          longevity_years?: number | null
+          name: string
+          neuroticism?: number | null
+          openness?: number | null
+          phone?: string | null
+          skills?: string[] | null
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          agreeableness?: number | null
+          best_fit_for?: string | null
+          candidate_type?: boolean | null
+          conscientiousness?: number | null
+          created_at?: string
+          education?: Json | null
+          email?: string
+          extraversion?: number | null
+          file_url?: string | null
+          fitment_score?: number | null
+          id?: string
+          longevity_years?: number | null
+          name?: string
+          neuroticism?: number | null
+          openness?: number | null
+          phone?: string | null
+          skills?: string[] | null
+          status?: string | null
+          summary?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
