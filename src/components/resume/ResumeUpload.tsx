@@ -120,10 +120,10 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
         });
       }, 300);
 
-      // Convert file to base64 for sending to edge function
-      const fileBase64 = await readFileAsBase64(file);
+      // Extract text from PDF
+      const resumeText = await extractTextFromPDF(file);
 
-      console.log('Calling parse-resume edge function...');
+      console.log('Calling parse-resume edge function with extracted text...');
 
       // Craft a prompt that will work well for resume parsing
       const prompt = `
@@ -182,11 +182,10 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
       `;
 
       try {
-        // Call the parse-resume edge function
+        // Call the parse-resume edge function with extracted text
         const response = await supabase.functions.invoke('parse-resume', {
           body: {
-            fileBase64,
-            mimeType: file.type
+            resumeText
           }
         });
 
@@ -275,20 +274,30 @@ export default function ResumeUpload({ onResumeUploaded, onParsingStateChange }:
     }
   };
 
-  const readFileAsBase64 = (file: File): Promise<string> => {
+  const extractTextFromPDF = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onload = () => {
-        if (typeof reader.result === 'string') {
-          // Extract base64 data without the prefix
-          const base64 = reader.result.split(',')[1];
-          resolve(base64);
-        } else {
-          reject(new Error('Failed to read file as base64'));
+      reader.onload = async () => {
+        try {
+          // For now, use a simple text extraction approach
+          const arrayBuffer = reader.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const text = new TextDecoder().decode(uint8Array);
+          
+          // Basic text extraction from PDF
+          // This extracts visible text between parentheses in PDF structure
+          const matches = text.match(/\(([^)]+)\)/g);
+          const extractedText = matches 
+            ? matches.map(m => m.slice(1, -1)).join(' ')
+            : text;
+          
+          resolve(extractedText);
+        } catch (error) {
+          reject(error);
         }
       };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsArrayBuffer(file);
     });
   };
 

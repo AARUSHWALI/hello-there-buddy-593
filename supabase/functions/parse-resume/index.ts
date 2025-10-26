@@ -6,8 +6,7 @@ const corsHeaders = {
 };
 
 interface ParseResumeRequest {
-  fileBase64: string;
-  mimeType: string;
+  resumeText: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -16,10 +15,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { fileBase64, mimeType }: ParseResumeRequest = await req.json();
+    const { resumeText }: ParseResumeRequest = await req.json();
 
-    if (!fileBase64) {
-      throw new Error("File data is required");
+    if (!resumeText) {
+      throw new Error("Resume text is required");
     }
 
     console.log("Parsing resume with Lovable AI...");
@@ -80,15 +79,7 @@ Return ONLY the JSON object, nothing else.`;
         messages: [
           {
             role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mimeType};base64,${fileBase64}`
-                }
-              }
-            ]
+            content: `${prompt}\n\nResume Content:\n${resumeText}`
           }
         ],
         temperature: 0.1,
