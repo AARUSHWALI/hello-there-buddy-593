@@ -12,6 +12,7 @@ import Interview from "./pages/Interview";
 import Resume from "./pages/Resume";
 import NotFound from "./pages/NotFound";
 import PersonalityTest from "./pages/PersonalityTest";
+import Big5Test from "./pages/Big5Test";
 import Settings from "./pages/Settings";
 // import RecentActivity from "./components/dashboard/RecentActivity";
 // import CandidateStatus from "./components/dashboard/CandidateStatus";
@@ -65,7 +66,7 @@ const App = () => (
               <CandidateStatus approvedCount={45} reviewCount={30} rejectedCount={25} />
             </MainLayout>
           } /> */}
-          <Route path="/personality-test" element={<PersonalityTest />} />
+          <Route path="/personality-test" element={<Big5Test />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
