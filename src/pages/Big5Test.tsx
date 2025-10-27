@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Dice6, ArrowLeft, ArrowRight, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, PlayCircle, CheckCircle2 } from 'lucide-react';
 import { questions } from '../../Big5/src/data/questions';
 import { calculateTraitScores } from '../../Big5/src/utils/scoring';
 import { supabase } from '@/integrations/supabase/client';
@@ -116,38 +116,81 @@ export default function Big5Test() {
     );
   }
 
+  const traits = [
+    {
+      name: 'Openness',
+      description: 'Appreciation for art, emotion, adventure, unusual ideas, curiosity, and variety of experience.',
+      icon: '🎨'
+    },
+    {
+      name: 'Conscientiousness',
+      description: 'Self-discipline, organized, and achievement-oriented behavior.',
+      icon: '📋'
+    },
+    {
+      name: 'Extraversion',
+      description: 'Energy, positive emotions, assertiveness, sociability, and stimulation in the company of others.',
+      icon: '🌟'
+    },
+    {
+      name: 'Agreeableness',
+      description: 'Compassion, cooperation, and concern for others\' needs.',
+      icon: '🤝'
+    },
+    {
+      name: 'Neuroticism',
+      description: 'Tendency to experience emotional instability, anxiety, moodiness, and irritability.',
+      icon: '🌊'
+    }
+  ];
+
   return (
-    <div className="container mx-auto max-w-2xl min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 font-sans text-amber-900 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 to-emerald-50 font-sans text-amber-900 p-4">
       {!started ? (
         <div className="flex flex-col items-center justify-center min-h-screen">
-          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-12 text-center max-w-2xl border-2 border-amber-200">
-            <div className="mb-8 flex justify-center">
-              <div className="p-6 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full shadow-lg">
-                <Dice6 size={64} className="text-white" />
-              </div>
+          <div className="max-w-4xl mx-auto px-4 py-16 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+              <h1 className="text-5xl font-bold text-amber-900 mb-4">
+                Big Five Personality Test
+              </h1>
+              <p className="text-xl text-amber-800">
+                Discover your personality traits through scientifically validated assessment
+              </p>
             </div>
-            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-amber-600 to-amber-800 bg-clip-text text-transparent">
-              Big Five Personality Test
-            </h1>
-            <p className="text-lg mb-8 text-amber-700">
-              Hello {name}! Discover your personality traits through 50 scientifically-backed questions.
-            </p>
-            <div className="bg-amber-50 rounded-xl p-6 mb-8 border border-amber-200">
-              <h3 className="font-semibold mb-3 text-amber-900">What you'll discover:</h3>
-              <ul className="text-left space-y-2 text-amber-800">
-                <li>• <strong>Extraversion</strong> - Your social energy level</li>
-                <li>• <strong>Agreeableness</strong> - How you interact with others</li>
-                <li>• <strong>Conscientiousness</strong> - Your organization and reliability</li>
-                <li>• <strong>Neuroticism</strong> - Your emotional stability</li>
-                <li>• <strong>Openness</strong> - Your creativity and curiosity</li>
-              </ul>
+
+            <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3 mb-12">
+              {traits.map((trait) => (
+                <div
+                  key={trait.name}
+                  className="bg-white/90 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-amber-100"
+                >
+                  <div className="text-4xl mb-4">{trait.icon}</div>
+                  <h3 className="text-xl font-semibold text-amber-900 mb-2">
+                    {trait.name}
+                  </h3>
+                  <p className="text-amber-700">
+                    {trait.description}
+                  </p>
+                </div>
+              ))}
             </div>
-            <Button 
-              onClick={handleStart}
-              className="px-8 py-6 text-lg bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white rounded-xl shadow-lg"
-            >
-              Begin Test
-            </Button>
+
+            <div className="bg-white/90 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-amber-100 text-center">
+              <h2 className="text-2xl font-bold text-amber-900 mb-4">
+                Ready to Begin, {name}?
+              </h2>
+              <p className="text-amber-700 mb-6">
+                This test consists of 50 questions and takes about 10 minutes to complete.
+                Your responses will help you understand your personality across five fundamental dimensions.
+              </p>
+              <Button 
+                onClick={handleStart}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                <PlayCircle size={24} />
+                Start Test
+              </Button>
+            </div>
           </div>
         </div>
       ) : !isComplete ? (
