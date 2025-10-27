@@ -54,6 +54,10 @@ function App({ isEmbedded = false }: AppProps) {
     }));
     setIntermediateScores(intermediateResults);
     setIsComplete(true);
+    
+    // Dispatch event for external listeners (like the main app)
+    const event = new CustomEvent('big5TestComplete', { detail: { scores } });
+    window.dispatchEvent(event);
   };
 
   const containerClasses = isEmbedded 
@@ -136,7 +140,12 @@ function App({ isEmbedded = false }: AppProps) {
           )}
         </div>
       ) : (
-        <ResultsCard scores={scores} />
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600 mx-auto mb-4"></div>
+            <p className="text-lg text-amber-700">Processing your results...</p>
+          </div>
+        </div>
       )}
     </div>
   );

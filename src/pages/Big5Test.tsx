@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ArrowLeft, ArrowRight, PlayCircle, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, ArrowLeft, ArrowRight, PlayCircle } from 'lucide-react';
 import { questions } from '../../Big5/src/data/questions';
 import { calculateTraitScores } from '../../Big5/src/utils/scoring';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Big5Test() {
   const [searchParams] = useSearchParams();
@@ -183,18 +182,18 @@ export default function Big5Test() {
                 This test consists of 50 questions and takes about 10 minutes to complete.
                 Your responses will help you understand your personality across five fundamental dimensions.
               </p>
-              <Button 
+              <button
                 onClick={handleStart}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
               >
                 <PlayCircle size={24} />
                 Start Test
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       ) : !isComplete ? (
-        <div className="mt-8">
+        <div className="max-w-2xl mx-auto mt-8">
           <div className="flex justify-between items-center mb-8">
             <button
               onClick={handlePrev}
@@ -257,10 +256,11 @@ export default function Big5Test() {
       ) : (
         <div className="flex items-center justify-center min-h-screen">
           <Card className="w-full max-w-md">
-            <CardContent className="pt-6 text-center">
+            <CardHeader className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600 mx-auto mb-4"></div>
-              <p className="text-lg text-amber-700">Saving your results...</p>
-            </CardContent>
+              <CardTitle>Saving your results...</CardTitle>
+              <CardDescription>Please wait while we process your personality test</CardDescription>
+            </CardHeader>
           </Card>
         </div>
       )}
