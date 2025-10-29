@@ -58,13 +58,19 @@ const questions = [
   {"code":50,"text":"I am full of ideas."}
 ];
 
+// Calculate Big5 trait scores from individual question responses
+// Each trait has 10 questions, scored 1-5, for a max of 50 points per trait
 const calculateTraitScores = (scores: number[]) => {
   const traitScores = new Array(5).fill(0);
+  
   scores.forEach((score, index) => {
     const question = questions[index];
+    // Map question to trait: 
+    // Extraversion (0), Agreeableness (1), Conscientiousness (2), Neuroticism (3), Openness (4)
     const traitIndex = (Math.abs(question.code) % 5 || 5) - 1;
     traitScores[traitIndex] += score;
   });
+  
   return traitScores;
 };
 
@@ -142,35 +148,56 @@ export default function PersonalityTest() {
   };
 
   const handleComplete = async () => {
+    // Validate all questions are answered
+    const unansweredCount = scores.filter(s => s === 0).length;
+    if (unansweredCount > 0) {
+      toast.error(`Please answer all questions. ${unansweredCount} remaining.`);
+      return;
+    }
+
     setIsComplete(true);
     setIsSubmitting(true);
 
     try {
+      // Calculate raw trait scores (each trait has 10 questions, max 50 points)
       const traitScores = calculateTraitScores(scores);
       
-      const normalizedScores = {
+      console.log('Big5 Raw Scores:', {
+        extraversion: traitScores[0],
+        agreeableness: traitScores[1],
+        conscientiousness: traitScores[2],
+        neuroticism: traitScores[3],
+        openness: traitScores[4],
+      });
+      
+      // Send raw scores - edge function will normalize to 0-100 scale
+      const results = {
         candidateEmail,
         resumeId: resumeId || undefined,
-        extraversion: Math.round((traitScores[0] / 50) * 100),
-        agreeableness: Math.round((traitScores[1] / 50) * 100),
-        conscientiousness: Math.round((traitScores[2] / 50) * 100),
-        neuroticism: Math.round((traitScores[3] / 50) * 100),
-        openness: Math.round((traitScores[4] / 50) * 100),
+        extraversion: traitScores[0],
+        agreeableness: traitScores[1],
+        conscientiousness: traitScores[2],
+        neuroticism: traitScores[3],
+        openness: traitScores[4],
       };
 
       const { data, error } = await supabase.functions.invoke('save-big5-results', {
-        body: normalizedScores
+        body: results
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
+      console.log('Results saved to Supabase:', data);
       toast.success('Thank you! Your results have been saved successfully.');
       
       setTimeout(() => {
         navigate('/thank-you');
       }, 2000);
     } catch (error) {
-      console.error('Error saving results:', error);
+      console.error('Error saving Big5 results:', error);
       toast.error('Failed to save results. Please try again.');
       setIsComplete(false);
       setIsSubmitting(false);
@@ -227,10 +254,9 @@ export default function PersonalityTest() {
           {currentQuestion === questions.length - 1 ? (
             <button
               onClick={handleComplete}
-              disabled={scores.some(s => s === 0)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
             >
-              <PlayCircle size={20} />
+              <CheckCircle2 size={20} />
               Complete
             </button>
           ) : (
