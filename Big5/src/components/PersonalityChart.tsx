@@ -41,7 +41,7 @@ export function PersonalityChart({ scores }: PersonalityChartProps) {
     ],
   };
 
-  const options = {
+  const options: any = {
     scales: {
       r: {
         angleLines: {
