@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface UserProfile {
   id: string;
@@ -29,69 +30,45 @@ export function useUsers() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      // Using mock data - replace with your actual API calls
-      const mockUsers: UserProfile[] = [
-        {
-          id: "1",
-          name: "Saksham Gupta",
-          email: "2022a6041@mietjammu.in",
-          score: 75.89,
-          jobRole: "Assistant Professor",
-          experience: "3+ Years",
-          education: "Ph.D. in Computer Science",
-          about: "Experienced educator with a focus on AI and machine learning",
-          personalityScores: {
-            extraversion: 76,
-            agreeableness: 84,
-            openness: 69,
-            neuroticism: 50,
-            conscientiousness: 90
-          }
-        },
-        {
-          id: "2",
-          name: "Ayush Thakur",
-          email: "ayushthakur1412@gmail.com",
-          score: 69.94,
-          jobRole: "Professor",
-          experience: "6+ Years",
-          education: "Master of Computer Science",
-          about: "Self-experienced Front End Developer with a strong background in software and web development",
-          personalityScores: {
-            extraversion: 68,
-            agreeableness: 72,
-            openness: 85,
-            neuroticism: 42,
-            conscientiousness: 81
-          }
-        },
-        {
-          id: "3",
-          name: "Dhruv Gupta",
-          email: "2022a6015@mietjammu.in",
-          score: 59.99,
-          jobRole: "Software Engineer",
-          experience: "4+ Years",
-          education: "M.Tech in Software Engineering",
-          about: "Software engineer with expertise in full-stack development.",
-          personalityScores: {
-            extraversion: 45,
-            agreeableness: 60,
-            openness: 55,
-            neuroticism: 25,
-            conscientiousness: 70
-          }
-        }
-      ];
+      console.log('📊 Fetching users from Supabase...');
+      
+      const { data: candidates, error } = (await supabase
+        .from('candidates' as any)
+        .select('*')
+        .order('created_at', { ascending: false })) as any;
 
-      setUsers(mockUsers);
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${candidates?.length || 0} candidates`);
+
+      // Map candidates to UserProfile format
+      const mappedUsers: UserProfile[] = (candidates || []).map((candidate: any) => ({
+        id: candidate.id,
+        name: candidate.name || 'Unknown',
+        email: candidate.email || '',
+        score: candidate.fitment_score || 0,
+        jobRole: candidate.best_fit_for,
+        experience: candidate.longevity_years ? `${candidate.longevity_years}+ Years` : undefined,
+        education: candidate.education ? JSON.stringify(candidate.education) : undefined,
+        about: candidate.summary,
+        profileImage: undefined,
+        personalityScores: {
+          extraversion: candidate.extraversion || 0,
+          agreeableness: candidate.agreeableness || 0,
+          openness: candidate.openness || 0,
+          neuroticism: candidate.neuroticism || 0,
+          conscientiousness: candidate.conscientiousness || 0,
+        }
+      }));
+
+      setUsers(mappedUsers);
     } catch (error) {
       toast({
         title: "Error fetching users",
         description: "Please try again later.",
         variant: "destructive",
       });
-      console.error('Error fetching users:', error);
+      console.error('❌ Error fetching users:', error);
     } finally {
       setIsLoading(false);
     }

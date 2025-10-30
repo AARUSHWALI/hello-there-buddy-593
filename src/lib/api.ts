@@ -1,9 +1,4 @@
-import axios from 'axios';
-
-// Use production API URL in production environment, otherwise use development URL
-const API_BASE_URL = import.meta.env.PROD 
-  ? import.meta.env.VITE_PROD_API_BASE_URL 
-  : import.meta.env.VITE_DEV_API_BASE_URL || 'http://localhost:5000/api';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface FitmentCriteria {
   id: string;
@@ -17,17 +12,26 @@ export interface FitmentCriteria {
 export const criteriaApi = {
   // Get current criteria
   getCriteria: async (): Promise<FitmentCriteria> => {
-    const response = await axios.get(`${API_BASE_URL}/criteria`);
-    return response.data;
+    const { data, error } = await supabase.functions.invoke('get-criteria', {
+      method: 'GET'
+    });
+    
+    if (error) throw error;
+    return data;
   },
 
   // Update criteria
-  updateCriteria: async (data: {
+  updateCriteria: async (updateData: {
     best_fit: number;
     average_fit: number;
     not_fit: number;
   }): Promise<FitmentCriteria> => {
-    const response = await axios.put(`${API_BASE_URL}/criteria`, data);
-    return response.data;
+    const { data, error } = await supabase.functions.invoke('get-criteria', {
+      method: 'PUT',
+      body: updateData
+    });
+    
+    if (error) throw error;
+    return data;
   },
 };
