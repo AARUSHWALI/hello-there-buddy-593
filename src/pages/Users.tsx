@@ -5,42 +5,9 @@ import { useLocation } from "react-router-dom";
 import UserDetailsDialog from "@/components/users/UserDetailsDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import axios from "axios";
 import { toast } from "@/components/ui/use-toast";
-import { getApiUrl } from "@/config/api.config";
-
-// API client with error handling
-const apiClient = {
-  get: async (endpoint: string) => {
-    try {
-      const response = await axios.get(getApiUrl(endpoint as any));
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching ${endpoint}:`, error);
-      throw error;
-    }
-  },
-  getCriteria: async () => {
-    try {
-      return await apiClient.get('criteria');
-    } catch (error) {
-      console.error('Error fetching criteria, using defaults:', error);
-      return {
-        best_fit: 80,
-        average_fit: 50,
-        not_fit: 0
-      };
-    }
-  },
-  getUsers: async () => {
-    return await apiClient.get('users');
-  }
-};
-
-// Alias for backward compatibility
-const criteriaApi = {
-  getCriteria: apiClient.getCriteria
-};
+import { supabase } from "@/integrations/supabase/client";
+import { criteriaApi } from "@/lib/api";
 
 export interface UserProfile {
   id: string;
@@ -72,7 +39,7 @@ export interface UserProfile {
   file_url?: string;
 }
 
-const API_BASE_URL = 'http://localhost:5000/api';
+
 
 const mapResumeToUserProfile = (resume: any): UserProfile => {
   // Format education if it's an array
@@ -164,7 +131,7 @@ export default function Users() {
   useEffect(() => {
     const fetchCriteria = async () => {
       try {
-        const data = await apiClient.getCriteria();
+        const data = await criteriaApi.getCriteria();
         setFitmentCriteria({
           best_fit: data.best_fit || 80,
           average_fit: data.average_fit || 50,
@@ -191,20 +158,29 @@ export default function Users() {
       setIsLoading(true);
       setError(null);
       
-      const response = await apiClient.getUsers();
+      console.log('📊 Fetching users from Supabase...');
       
-      if (response?.success && Array.isArray(response.data)) {
-        const userProfiles = response.data.map((resume: any) => mapResumeToUserProfile(resume));
+      const { data: candidates, error } = await supabase
+        .from('candidates' as any)
+        .select('*')
+        .order('created_at', { ascending: false }) as any;
+
+      if (error) throw error;
+
+      console.log(`✅ Fetched ${candidates?.length || 0} candidates`);
+      
+      if (candidates && Array.isArray(candidates)) {
+        const userProfiles = candidates.map((resume: any) => mapResumeToUserProfile(resume));
         setUsers(userProfiles);
       } else {
-        throw new Error('Invalid response format from server');
+        setUsers([]);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error in fetchUsers:', err);
-      setError('Failed to fetch users. Please make sure the backend server is running.');
+      setError('Failed to fetch users from database.');
       toast({
         title: "Error",
-        description: err.response?.data?.message || 'Failed to connect to the server',
+        description: err?.message || 'Failed to fetch users',
         variant: "destructive",
       });
       setUsers([]);
